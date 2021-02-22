@@ -7,8 +7,8 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 #[cfg(test)]
 mod tests {
     use super::Highs_call;
-    use std::os::raw::c_int;
     use std::convert::TryInto;
+    use std::os::raw::c_int;
 
     #[test]
     fn highs_call() {
@@ -111,7 +111,7 @@ mod tests {
                 rowdual.as_mut_ptr(),
                 colbasisstatus.as_mut_ptr(),
                 rowbasisstatus.as_mut_ptr(),
-                modelstatus
+                modelstatus,
             )
         };
 
