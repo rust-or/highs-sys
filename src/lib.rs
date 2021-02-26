@@ -2,35 +2,29 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
+use std::os::raw::c_int;
+
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
-#[repr(C)]
-#[derive(Clone, Copy, Debug, PartialOrd, PartialEq, Ord, Eq)]
-pub enum HighsModelStatus {
-    NOTSET = 0,
-    LOAD_ERROR = 1,
-    MODEL_ERROR = 2,
-    PRESOLVE_ERROR = 3,
-    SOLVE_ERROR = 4,
-    POSTSOLVE_ERROR = 5,
-    MODEL_EMPTY = 6,
-    PRIMAL_INFEASIBLE = 7,
-    PRIMAL_UNBOUNDED = 8,
-    OPTIMAL = 9,
-    REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND = 10,
-    REACHED_TIME_LIMIT = 11,
-    REACHED_ITERATION_LIMIT = 12,
-    PRIMAL_DUAL_INFEASIBLE = 13,
-    DUAL_INFEASIBLE = 14,
-}
+pub const MODEL_STATUS_NOTSET: c_int = 0;
+pub const MODEL_STATUS_LOAD_ERROR: c_int = 1;
+pub const MODEL_STATUS_MODEL_ERROR: c_int = 2;
+pub const MODEL_STATUS_PRESOLVE_ERROR: c_int = 3;
+pub const MODEL_STATUS_SOLVE_ERROR: c_int = 4;
+pub const MODEL_STATUS_POSTSOLVE_ERROR: c_int = 5;
+pub const MODEL_STATUS_MODEL_EMPTY: c_int = 6;
+pub const MODEL_STATUS_PRIMAL_INFEASIBLE: c_int = 7;
+pub const MODEL_STATUS_PRIMAL_UNBOUNDED: c_int = 8;
+pub const MODEL_STATUS_OPTIMAL: c_int = 9;
+pub const MODEL_STATUS_REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND: c_int = 10;
+pub const MODEL_STATUS_REACHED_TIME_LIMIT: c_int = 11;
+pub const MODEL_STATUS_REACHED_ITERATION_LIMIT: c_int = 12;
+pub const MODEL_STATUS_PRIMAL_DUAL_INFEASIBLE: c_int = 13;
+pub const MODEL_STATUS_DUAL_INFEASIBLE: c_int = 14;
 
-#[repr(C)]
-#[derive(Clone, Copy, Debug, PartialOrd, PartialEq, Ord, Eq)]
-pub enum HighsStatus {
-    OK = 0,
-    Warning = 1,
-    Error = 2,
-}
+pub const STATUS_OK: c_int = 0;
+pub const STATUS_WARNING: c_int = 1;
+pub const STATUS_ERROR: c_int = 2;
 
 
 #[cfg(test)]
@@ -146,7 +140,7 @@ mod tests {
             )
         };
 
-        assert_eq!(status, HighsStatus::OK as c_int);
+        assert_eq!(status, STATUS_OK);
         assert_eq!(colvalue, &[2., 4.]);
     }
 
@@ -208,10 +202,10 @@ mod tests {
             // Solving the problem without printing to the standard output
             Highs_runQuiet(highs);
             let status = Highs_run(highs);
-            assert_eq!(status, 0);
+            assert_eq!(status, STATUS_OK);
 
             let model_status = Highs_getModelStatus(highs, 0);
-            assert_eq!(model_status, HighsModelStatus::OPTIMAL as c_int);
+            assert_eq!(model_status, MODEL_STATUS_OPTIMAL);
 
             let mut objective_function_value = 0.;
             let info_name = CString::new("objective_function_value").unwrap();
