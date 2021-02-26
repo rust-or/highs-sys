@@ -1,11 +1,11 @@
 [package]
 name = "highs-sys"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["Ophir LOJKINE"]
 edition = "2018"
 description = "Rust binding for the HiGHS linear programming solver. See http://highs.dev."
 license = "MIT"
-repository = "https://github.com/lovasoa/highs-sys"
+repository = "https://github.com/rust-or/highs-sys"
 keywords = ["linear-programming", "optimization", "math", "solver"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
