@@ -117,3 +117,5 @@ fn main() {
     assert_eq!(colvalue, &[2., 4.]);
 }
 ```
+
+For more examples, have a look at [`lib.rs`](https://github.com/lovasoa/highs-sys/blob/master/src/lib.rs).
