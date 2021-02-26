@@ -4,12 +4,42 @@
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialOrd, PartialEq, Ord, Eq)]
+pub enum HighsModelStatus {
+    NOTSET = 0,
+    LOAD_ERROR = 1,
+    MODEL_ERROR = 2,
+    PRESOLVE_ERROR = 3,
+    SOLVE_ERROR = 4,
+    POSTSOLVE_ERROR = 5,
+    MODEL_EMPTY = 6,
+    PRIMAL_INFEASIBLE = 7,
+    PRIMAL_UNBOUNDED = 8,
+    OPTIMAL = 9,
+    REACHED_DUAL_OBJECTIVE_VALUE_UPPER_BOUND = 10,
+    REACHED_TIME_LIMIT = 11,
+    REACHED_ITERATION_LIMIT = 12,
+    PRIMAL_DUAL_INFEASIBLE = 13,
+    DUAL_INFEASIBLE = 14,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug, PartialOrd, PartialEq, Ord, Eq)]
+pub enum HighsStatus {
+    OK = 0,
+    Warning = 1,
+    Error = 2,
+}
+
+
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::convert::TryInto;
-    use std::os::raw::c_int;
     use std::ffi::CString;
+    use std::os::raw::c_int;
+
+    use super::*;
 
     #[test]
     fn highs_call() {
@@ -116,7 +146,7 @@ mod tests {
             )
         };
 
-        assert_eq!(status, 0);
+        assert_eq!(status, HighsStatus::OK as c_int);
         assert_eq!(colvalue, &[2., 4.]);
     }
 
@@ -179,6 +209,9 @@ mod tests {
             Highs_runQuiet(highs);
             let status = Highs_run(highs);
             assert_eq!(status, 0);
+
+            let model_status = Highs_getModelStatus(highs, 0);
+            assert_eq!(model_status, HighsModelStatus::OPTIMAL as c_int);
 
             let mut objective_function_value = 0.;
             let info_name = CString::new("objective_function_value").unwrap();
