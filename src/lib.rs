@@ -4,7 +4,7 @@
 
 use std::os::raw::c_int;
 
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+include!(concat!(env!("OUT_DIR"), "/c_bindings.rs"));
 
 pub const MODEL_STATUS_NOTSET: c_int = 0;
 pub const MODEL_STATUS_LOAD_ERROR: c_int = 1;

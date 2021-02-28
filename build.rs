@@ -6,6 +6,7 @@ fn main() {
     let dst = Config::new("HiGHS").define("OPENMP", "ON").build();
     println!("cargo:rustc-link-search=all={}/lib", dst.display());
     println!("cargo:rustc-link-lib=highs");
+    println!("cargo:rerun-if-changed=HiGHS/src/interfaces/highs_c_api.h");
 
     let include_path = dst.join("include");
     let src_path = PathBuf::from("HiGHS").join("src");
@@ -13,7 +14,7 @@ fn main() {
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for
     // the resulting bindings.
-    let bindings = bindgen::Builder::default()
+    let c_bindings = bindgen::Builder::default()
         // The input header we would like to generate
         // bindings for.
         .header(
@@ -36,7 +37,7 @@ fn main() {
 
     // Write the bindings to the $OUT_DIR/bindings.rs file.
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-    bindings
-        .write_to_file(out_path.join("bindings.rs"))
+    c_bindings
+        .write_to_file(out_path.join("c_bindings.rs"))
         .expect("Couldn't write bindings!");
 }
