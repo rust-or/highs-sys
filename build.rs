@@ -44,7 +44,12 @@ fn main() {
 
     println!("cargo:rustc-link-search=native={}/lib", dst.display());
     println!("cargo:rustc-link-lib=static=highs");
-    println!("cargo:rustc-link-lib=dylib=stdc++");
+    let libcpp = if !cfg!(target_os = "macos") {
+        "c++"
+    } else {
+        "stdc++"
+    };
+    println!("cargo:rustc-link-lib=dylib={}", libcpp);
     if !cfg!(target_os = "windows") {
         println!("cargo:rustc-link-lib=dylib=gomp");
     }
