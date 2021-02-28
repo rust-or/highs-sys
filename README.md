@@ -5,6 +5,17 @@
 Rust binding for the HiGHS linear programming solver.
 See http://highs.dev.
 
+## Dependencies
+
+This library depends on libstdc++ and libgomp.
+
+```
+sudo apt-get install libstdc++6 libgomp1
+```
+
+HiGHS itself is built statically, so you don't need to install it
+separately on the target system.
+
 ## Example
 
 ```rust
