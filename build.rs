@@ -50,7 +50,9 @@ fn main() {
         "stdc++"
     };
     println!("cargo:rustc-link-lib=dylib={}", libcpp);
-    if !cfg!(target_os = "windows") {
+    if cfg!(target_os = "macos") {
+        println!("cargo:rustc-link-lib=dylib=omp");
+    } else if !cfg!(target_os = "windows") { // No openmp 3 on windows
         println!("cargo:rustc-link-lib=dylib=gomp");
     }
     println!("cargo:rerun-if-changed=HiGHS/src/interfaces/highs_c_api.h");
