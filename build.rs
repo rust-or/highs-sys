@@ -48,9 +48,10 @@ fn main() {
     let target = env::var("TARGET").unwrap();
     let apple = target.contains("apple");
     let windows = target.contains("windows");
+    let linux = target.contains("linux");
     if apple {
         println!("cargo:rustc-link-lib=static=c++");
-    } else {
+    } else if linux {
         println!("cargo:rustc-link-lib=dylib=stdc++");
     }
     if apple {
