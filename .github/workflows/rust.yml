@@ -20,6 +20,8 @@ jobs:
           - os: windows-latest
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: recursive
     - name: Build
       run: cargo build
     - name: Run tests
