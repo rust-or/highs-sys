@@ -96,16 +96,16 @@ mod tests {
         let nnz: usize = 5;
 
         // Define the column costs, lower bounds and upper bounds
-        let colcost: &mut [f64] = &mut [2.0, 3.0];
-        let collower: &mut [f64] = &mut [0.0, 1.0];
-        let colupper: &mut [f64] = &mut [3.0, 1.0e30];
+        let colcost: &[f64] = &[2.0, 3.0];
+        let collower: &[f64] = &[0.0, 1.0];
+        let colupper: &[f64] = &[3.0, 1.0e30];
         // Define the row lower bounds and upper bounds
-        let rowlower: &mut [f64] = &mut [-1.0e30, 10.0, 8.0];
-        let rowupper: &mut [f64] = &mut [6.0, 14.0, 1.0e30];
+        let rowlower: &[f64] = &[-1.0e30, 10.0, 8.0];
+        let rowupper: &[f64] = &[6.0, 14.0, 1.0e30];
         // Define the constraint matrix column-wise
-        let astart: &mut [c_int] = &mut [0, 2];
-        let aindex: &mut [c_int] = &mut [1, 2, 0, 1, 2];
-        let avalue: &mut [f64] = &mut [1.0, 2.0, 1.0, 2.0, 1.0];
+        let astart: &[c_int] = &[0, 2];
+        let aindex: &[c_int] = &[1, 2, 0, 1, 2];
+        let avalue: &[f64] = &[1.0, 2.0, 1.0, 2.0, 1.0];
 
         let colvalue: &mut [f64] = &mut vec![0.; numcol];
         let coldual: &mut [f64] = &mut vec![0.; numcol];
@@ -122,14 +122,14 @@ mod tests {
                 numcol.try_into().unwrap(),
                 numrow.try_into().unwrap(),
                 nnz.try_into().unwrap(),
-                colcost.as_mut_ptr(),
-                collower.as_mut_ptr(),
-                colupper.as_mut_ptr(),
-                rowlower.as_mut_ptr(),
-                rowupper.as_mut_ptr(),
-                astart.as_mut_ptr(),
-                aindex.as_mut_ptr(),
-                avalue.as_mut_ptr(),
+                colcost.as_ptr(),
+                collower.as_ptr(),
+                colupper.as_ptr(),
+                rowlower.as_ptr(),
+                rowupper.as_ptr(),
+                astart.as_ptr(),
+                aindex.as_ptr(),
+                avalue.as_ptr(),
                 colvalue.as_mut_ptr(),
                 coldual.as_mut_ptr(),
                 rowvalue.as_mut_ptr(),
