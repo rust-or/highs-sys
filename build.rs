@@ -7,6 +7,7 @@ fn main() {
     let dst = Config::new("HiGHS")
         .define("FAST_BUILD", "ON")
         .define("SHARED", "OFF")
+        .static_crt(true)
         .build();
 
     let include_path = dst.join("include");
@@ -44,14 +45,17 @@ fn main() {
 
     println!("cargo:rustc-link-search=native={}/lib", dst.display());
     println!("cargo:rustc-link-lib=static=highs");
-    if cfg!(target_os = "linux") {
+    let target = env::var("TARGET").unwrap();
+    let apple = target.contains("apple");
+    let windows = target.contains("windows");
+    if apple {
+        println!("cargo:rustc-link-lib=static=c++");
+    } else {
         println!("cargo:rustc-link-lib=dylib=stdc++");
-    } else if cfg!(target_os = "macos") {
-        println!("cargo:rustc-link-lib=dylib=c++");
     }
-    if cfg!(target_os = "macos") {
+    if apple {
         println!("cargo:rustc-link-lib=dylib=omp");
-    } else if !cfg!(target_os = "windows") { // No openmp 3 on windows
+    } else if !windows { // No openmp 3 on windows
         println!("cargo:rustc-link-lib=dylib=gomp");
     }
     println!("cargo:rerun-if-changed=HiGHS/src/interfaces/highs_c_api.h");
