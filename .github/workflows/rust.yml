@@ -20,7 +20,7 @@ jobs:
           - os: windows-latest
     steps:
     - name: Set LIBCLANG_PATH # see https://github.com/rust-lang/rust-bindgen/issues/1797
-      run: echo "LIBCLANG_PATH=C:\msys64\mingw64\bin" >> $env:GITHUB_ENV
+      run: echo "LIBCLANG_PATH=C:\\msys64\\mingw64\\bin\\" >> $env:GITHUB_ENV
       if: matrix.config.os == 'windows-latest'
     - uses: actions/checkout@v2
       with:
