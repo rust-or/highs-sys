@@ -44,7 +44,7 @@ fn main() {
 
     println!("cargo:rustc-link-search=native={}/lib", dst.display());
     println!("cargo:rustc-link-lib=static=highs");
-    let libcpp = if !cfg!(target_os = "macos") {
+    let libcpp = if cfg!(target_os = "macos") {
         "c++"
     } else {
         "stdc++"
