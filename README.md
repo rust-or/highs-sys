@@ -129,4 +129,4 @@ fn main() {
 }
 ```
 
-For more examples, have a look at [`lib.rs`](https://github.com/lovasoa/highs-sys/blob/master/src/lib.rs).
+For more examples, have a look at [`tests`](https://github.com/lovasoa/highs-sys/blob/master/tests).
