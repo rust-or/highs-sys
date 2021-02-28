@@ -51,7 +51,7 @@ fn main() {
     let windows = target.contains("windows");
     let linux = target.contains("linux");
     if apple {
-        println!("cargo:rustc-link-lib=static=c++");
+        println!("cargo:rustc-link-lib=dylib=c++");
     } else if linux {
         println!("cargo:rustc-link-lib=dylib=stdc++");
     }
