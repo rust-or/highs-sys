@@ -7,6 +7,7 @@ fn main() {
     let dst = Config::new("HiGHS")
         .define("FAST_BUILD", "ON")
         .define("SHARED", "OFF")
+        .define("MSVC_RUNTIME_LIBRARY", "MultiThreaded")
         .static_crt(true)
         .build();
 
