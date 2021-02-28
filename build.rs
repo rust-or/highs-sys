@@ -1,10 +1,10 @@
-use cmake::Config;
 use std::env;
 use std::path::PathBuf;
 
+use cmake::Config;
+
 fn main() {
     let dst = Config::new("HiGHS")
-        .define("OPENMP", "ON")
         .define("FAST_BUILD", "ON")
         .define("SHARED", "OFF")
         .build();
@@ -45,6 +45,8 @@ fn main() {
     println!("cargo:rustc-link-search=native={}/lib", dst.display());
     println!("cargo:rustc-link-lib=static=highs");
     println!("cargo:rustc-link-lib=dylib=stdc++");
-    println!("cargo:rustc-link-lib=dylib=gomp");
+    if !cfg!(target_os = "windows") {
+        println!("cargo:rustc-link-lib=dylib=gomp");
+    }
     println!("cargo:rerun-if-changed=HiGHS/src/interfaces/highs_c_api.h");
 }
