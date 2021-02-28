@@ -44,12 +44,11 @@ fn main() {
 
     println!("cargo:rustc-link-search=native={}/lib", dst.display());
     println!("cargo:rustc-link-lib=static=highs");
-    let libcpp = if cfg!(target_os = "linux") {
-        "stdc++"
-    } else {
-        "c++"
-    };
-    println!("cargo:rustc-link-lib=dylib={}", libcpp);
+    if cfg!(target_os = "linux") {
+        println!("cargo:rustc-link-lib=dylib=stdc++");
+    } else if cfg!(target_os = "macos") {
+        println!("cargo:rustc-link-lib=dylib=c++");
+    }
     if cfg!(target_os = "macos") {
         println!("cargo:rustc-link-lib=dylib=omp");
     } else if !cfg!(target_os = "windows") { // No openmp 3 on windows
