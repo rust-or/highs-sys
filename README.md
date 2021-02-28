@@ -9,8 +9,18 @@ See http://highs.dev.
 
 This library depends on libstdc++ and libgomp.
 
+#### Install on debian
+
 ```
 sudo apt-get install libstdc++6 libgomp1
+```
+
+(These are probably already installed on your system)
+
+#### Install on MacOS
+
+```
+brew install libomp
 ```
 
 HiGHS itself is built statically, so you don't need to install it
