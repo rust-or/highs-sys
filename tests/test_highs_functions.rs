@@ -71,7 +71,8 @@ fn highs_functions() {
         assert_ne!(0, success, "addRows");
 
         // -1 = maximize
-        Highs_changeObjectiveSense(highs, -1);
+        let success = Highs_changeObjectiveSense(highs, -1);
+        assert_eq!(success, 1);
 
         let simplex_scale_strategy = 3;
         let option_name = CString::new("simplex_scale_strategy").unwrap();
