@@ -7,8 +7,7 @@ fn main() {
     let dst = Config::new("HiGHS")
         .define("FAST_BUILD", "ON")
         .define("SHARED", "OFF")
-        .define("MSVC_RUNTIME_LIBRARY", "MultiThreadedDebug")
-        .static_crt(true)
+        .define("MSVC_RUNTIME_LIBRARY", "MultiThreadedDLL")
         .build();
 
     let include_path = dst.join("include");
