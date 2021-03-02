@@ -7,7 +7,8 @@ See http://highs.dev.
 
 ## Dependencies
 
-This library depends on libstdc++ and libgomp.
+This library depends on libstdc++ and libgomp at runtime.
+In order to build, it requires cmake and a C++ compiler.
 
 #### Install on debian
 
