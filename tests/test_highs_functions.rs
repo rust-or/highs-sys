@@ -23,6 +23,7 @@ fn highs_functions() {
         // 0 <= x_0 <= 3; 1 <= x_1
 
         let highs = Highs_create();
+        assert_eq!(0, Highs_runQuiet(highs)); // Do not write to stdout/stderr
 
         let numcol: usize = 2;
         let numrow: usize = 3;
