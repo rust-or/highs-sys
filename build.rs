@@ -8,6 +8,7 @@ fn main() {
         .define("FAST_BUILD", "ON")
         .define("SHARED", "OFF")
         .define("CMAKE_MSVC_RUNTIME_LIBRARY", "MultiThreadedDLL")
+        .define("CMAKE_CXX_STANDARD_LIBRARIES", "-static-libgcc -static-libstdc++")
         .build();
 
     let include_path = dst.join("include");
