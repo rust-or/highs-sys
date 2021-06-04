@@ -53,7 +53,7 @@ fn main() {
     if apple {
         println!("cargo:rustc-link-lib=dylib=c++");
     } else if linux {
-        println!("cargo:rustc-link-lib=dylib=stdc++");
+        println!("cargo:rustc-link-lib=static=stdc++");
     }
     if apple {
         println!("cargo:rustc-link-lib=dylib=omp");
