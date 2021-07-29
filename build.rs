@@ -4,12 +4,26 @@ use std::path::PathBuf;
 use cmake::Config;
 
 fn main() {
-    let dst = Config::new("HiGHS")
-        .define("FAST_BUILD", "ON")
-        .define("SHARED", "OFF")
-        .define("CMAKE_MSVC_RUNTIME_LIBRARY", "MultiThreadedDLL")
-        .build();
+    // Targets
+    let target = env::var("TARGET").unwrap();
+    let apple = target.contains("apple");
+    let windows = target.contains("windows");
+    let linux = target.contains("linux");
+    let musl = target.contains("musl");
 
+    let mut dst = Config::new("HiGHS");
+    dst.define("FAST_BUILD", "ON")
+        .define("SHARED", "OFF")
+        .define("CMAKE_MSVC_RUNTIME_LIBRARY", "MultiThreadedDLL");
+
+    if musl {
+        dst.define(
+            "CMAKE_CXX_STANDARD_LIBRARIES",
+            "-static-libgcc -static-libstdc++",
+        );
+    };
+
+    let dst = dst.build();
     let include_path = dst.join("include");
     let src_path = PathBuf::from("HiGHS").join("src");
 
@@ -45,18 +59,19 @@ fn main() {
 
     println!("cargo:rustc-link-search=native={}/lib", dst.display());
     println!("cargo:rustc-link-lib=static=highs");
-    let target = env::var("TARGET").unwrap();
-    let apple = target.contains("apple");
-    let windows = target.contains("windows");
-    let linux = target.contains("linux");
+
     if apple {
         println!("cargo:rustc-link-lib=dylib=c++");
+    } else if musl {
+        println!("cargo:rustc-link-lib=static=stdc++");
     } else if linux {
         println!("cargo:rustc-link-lib=dylib=stdc++");
     }
+
     if apple {
         println!("cargo:rustc-link-lib=dylib=omp");
-    } else if !windows { // No openmp 3 on windows
+    } else if !windows {
+        // No openmp 3 on windows
         println!("cargo:rustc-link-lib=dylib=gomp");
     }
     println!("cargo:rerun-if-changed=HiGHS/src/interfaces/highs_c_api.h");

@@ -12,5 +12,5 @@ keywords = ["linear-programming", "optimization", "math", "solver"]
 [dependencies]
 
 [build-dependencies]
-bindgen = "0.57"
+bindgen = "0.59.1"
 cmake = "0.1"
