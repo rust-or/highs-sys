@@ -83,12 +83,16 @@ fn highs_call() {
     let rowbasisstatus: &mut [c_int] = &mut vec![0; numrow];
 
     let modelstatus: &mut c_int = &mut 0;
+    let offset = 0.0;
 
     let status: c_int = unsafe {
-        Highs_call(
+        Highs_lpCall(
             numcol.try_into().unwrap(),
             numrow.try_into().unwrap(),
             nnz.try_into().unwrap(),
+            MATRIX_FORMAT_COLUMN_WISE,
+            OBJECTIVE_SENSE_MINIMIZE,
+            offset,
             colcost.as_ptr(),
             collower.as_ptr(),
             colupper.as_ptr(),

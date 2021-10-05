@@ -23,19 +23,20 @@ fn highs_functions() {
         // 0 <= x_0 <= 3; 1 <= x_1
 
         let highs = Highs_create();
-        assert_eq!(0, Highs_runQuiet(highs)); // Do not write to stdout/stderr
 
         let numcol: usize = 2;
         let numrow: usize = 3;
         let nnz: usize = 5;
 
+        let inf = Highs_getInfinity(highs);
+
         // Define the column costs, lower bounds and upper bounds
         let colcost: &mut [f64] = &mut [2.0, 3.0];
         let collower: &mut [f64] = &mut [0.0, 1.0];
-        let colupper: &mut [f64] = &mut [3.0, 1.0e30];
+        let colupper: &mut [f64] = &mut [3.0, inf];
         // Define the row lower bounds and upper bounds
-        let rowlower: &mut [f64] = &mut [-1.0e30, 10.0, 8.0];
-        let rowupper: &mut [f64] = &mut [6.0, 14.0, 1.0e30];
+        let rowlower: &mut [f64] = &mut [-inf, 10.0, 8.0];
+        let rowupper: &mut [f64] = &mut [6.0, 14.0, inf];
 
         // Define the constraint matrix row-wise, as it is added to the LP
         // with the rows
@@ -57,7 +58,7 @@ fn highs_functions() {
             null(),
             null(),
         );
-        assert_ne!(0, success, "addCols");
+        assert_eq!(STATUS_OK, success, "addCols");
         // Add three rows to the 2-column LP
         let success = Highs_addRows(
             highs,
@@ -69,22 +70,22 @@ fn highs_functions() {
             ptr(arindex),
             ptr(arvalue),
         );
-        assert_ne!(0, success, "addRows");
+        assert_eq!(STATUS_OK, success, "addRows");
 
-        // -1 = maximize
-        let success = Highs_changeObjectiveSense(highs, -1);
-        assert_eq!(success, 1);
+        let success = Highs_changeObjectiveSense(highs, OBJECTIVE_SENSE_MAXIMIZE);
+        assert_eq!(success, STATUS_OK);
 
         let simplex_scale_strategy = 3;
         let option_name = CString::new("simplex_scale_strategy").unwrap();
-        Highs_setHighsIntOptionValue(highs, option_name.as_ptr(), simplex_scale_strategy);
+        Highs_setIntOptionValue(highs, option_name.as_ptr(), simplex_scale_strategy);
 
         // Solving the problem without printing to the standard output
-        Highs_runQuiet(highs);
+        let option_name = CString::new("output_flag").unwrap();
+        Highs_setBoolOptionValue(highs, option_name.as_ptr(), 0);
         let status = Highs_run(highs);
         assert_eq!(status, STATUS_OK);
 
-        let model_status = Highs_getModelStatus(highs, 0);
+        let model_status = Highs_getModelStatus(highs);
         assert_eq!(model_status, MODEL_STATUS_OPTIMAL);
 
         let mut objective_function_value = 0.;
