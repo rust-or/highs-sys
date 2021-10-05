@@ -1,6 +1,5 @@
 use highs_sys::*;
 use std::convert::TryInto;
-use std::os::raw::c_int;
 
 #[test]
 fn highs_call() {
@@ -70,8 +69,8 @@ fn highs_call() {
     let rowlower: &[f64] = &[-1.0e30, 10.0, 8.0];
     let rowupper: &[f64] = &[6.0, 14.0, 1.0e30];
     // Define the constraint matrix column-wise
-    let astart: &[c_int] = &[0, 2];
-    let aindex: &[c_int] = &[1, 2, 0, 1, 2];
+    let astart: &[HighsInt] = &[0, 2];
+    let aindex: &[HighsInt] = &[1, 2, 0, 1, 2];
     let avalue: &[f64] = &[1.0, 2.0, 1.0, 2.0, 1.0];
 
     let colvalue: &mut [f64] = &mut vec![0.; numcol];
@@ -79,13 +78,13 @@ fn highs_call() {
     let rowvalue: &mut [f64] = &mut vec![0.; numrow];
     let rowdual: &mut [f64] = &mut vec![0.; numrow];
 
-    let colbasisstatus: &mut [c_int] = &mut vec![0; numcol];
-    let rowbasisstatus: &mut [c_int] = &mut vec![0; numrow];
+    let colbasisstatus: &mut [HighsInt] = &mut vec![0; numcol];
+    let rowbasisstatus: &mut [HighsInt] = &mut vec![0; numrow];
 
-    let modelstatus: &mut c_int = &mut 0;
+    let modelstatus: &mut HighsInt = &mut 0;
     let offset = 0.0;
 
-    let status: c_int = unsafe {
+    let status: HighsInt = unsafe {
         Highs_lpCall(
             numcol.try_into().unwrap(),
             numrow.try_into().unwrap(),

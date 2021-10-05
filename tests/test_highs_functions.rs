@@ -1,10 +1,9 @@
 use std::convert::TryInto;
 use std::ffi::CString;
-use std::os::raw::c_int;
 
 use highs_sys::*;
 
-fn c(n: usize) -> c_int {
+fn c(n: usize) -> HighsInt {
     n.try_into().unwrap()
 }
 
@@ -40,8 +39,8 @@ fn highs_functions() {
 
         // Define the constraint matrix row-wise, as it is added to the LP
         // with the rows
-        let arstart: &mut [c_int] = &mut [0, 1, 3];
-        let arindex: &mut [c_int] = &mut [1, 0, 1, 0, 1];
+        let arstart: &mut [HighsInt] = &mut [0, 1, 3];
+        let arindex: &mut [HighsInt] = &mut [1, 0, 1, 0, 1];
         let arvalue: &mut [f64] = &mut [1.0, 1.0, 2.0, 2.0, 1.0];
 
         use std::ptr::null;
@@ -112,8 +111,8 @@ fn highs_functions() {
         );
         assert_eq!(colvalue, &[3.0, 5.5]);
 
-        let colbasisstatus: &mut [c_int] = &mut vec![0; numcol];
-        let rowbasisstatus: &mut [c_int] = &mut vec![0; numrow];
+        let colbasisstatus: &mut [HighsInt] = &mut vec![0; numcol];
+        let rowbasisstatus: &mut [HighsInt] = &mut vec![0; numrow];
         // Get the basis
         Highs_getBasis(highs, ptr(colbasisstatus), ptr(rowbasisstatus));
         assert_eq!(colbasisstatus, &[2, 1]);
