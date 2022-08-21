@@ -121,11 +121,12 @@ fn highs_functions() {
     }
 }
 
-
 #[test]
 fn highs_functions_multithread() {
-    let threads: Vec<_> = (0..1000).map(|_| std::thread::spawn(highs_functions)).collect();
-    for t in threads{
+    let threads: Vec<_> = (0..1000)
+        .map(|_| std::thread::spawn(highs_functions))
+        .collect();
+    for t in threads {
         t.join().expect("Thread should not panic");
     }
 }
