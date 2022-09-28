@@ -34,6 +34,20 @@ brew install libomp
 HiGHS itself is built statically, so you don't need to install it
 separately on the target system.
 
+#### Install on Windows
+
+You need to install [CMake](https://cmake.org/download/) and [Clang (available in LLVM)](https://releases.llvm.org/download.html).
+
+They are available in [winget](https://winget.run/).
+
+```powershell
+winget install -e --id Kitware.CMake
+winget install -e --id LLVM.LLVM
+```
+
+HiGHS itself is built statically, so you don't need to install it
+separately on the target system.
+
 ## Example
 
 ```rust
