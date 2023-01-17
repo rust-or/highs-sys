@@ -10,7 +10,7 @@ fn main() {
         .define("CMAKE_MSVC_RUNTIME_LIBRARY", "MultiThreadedDLL")
         .build();
 
-    let include_path = dst.join("include");
+    let include_path = dst.join("include").join("highs");
     let src_path = PathBuf::from("HiGHS").join("src");
 
     // The bindgen::Builder is the main entry point

@@ -23,6 +23,10 @@ fn highs_functions() {
 
         let highs = Highs_create();
 
+        // Solving the problem without printing to the standard output
+        let option_name = CString::new("output_flag").unwrap();
+        Highs_setBoolOptionValue(highs, option_name.as_ptr(), 0);
+
         let numcol: usize = 2;
         let numrow: usize = 3;
         let nnz: usize = 5;
@@ -78,9 +82,6 @@ fn highs_functions() {
         let option_name = CString::new("simplex_scale_strategy").unwrap();
         Highs_setIntOptionValue(highs, option_name.as_ptr(), simplex_scale_strategy);
 
-        // Solving the problem without printing to the standard output
-        let option_name = CString::new("output_flag").unwrap();
-        Highs_setBoolOptionValue(highs, option_name.as_ptr(), 0);
         let status = Highs_run(highs);
         assert_eq!(status, STATUS_OK);
 
