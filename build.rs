@@ -8,6 +8,7 @@ fn main() {
         .define("FAST_BUILD", "ON")
         .define("SHARED", "OFF")
         .define("CMAKE_MSVC_RUNTIME_LIBRARY", "MultiThreadedDLL")
+        .define("CMAKE_INTERPROCEDURAL_OPTIMIZATION", "FALSE")
         .build();
 
     let include_path = dst.join("include").join("highs");
