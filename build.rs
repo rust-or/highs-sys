@@ -4,7 +4,13 @@ use std::path::PathBuf;
 use cmake::Config;
 
 fn main() {
-    let dst = Config::new("HiGHS")
+    let mut dst = Config::new("HiGHS");
+
+    if cfg!(feature = "ninja") {
+        dst.generator("Ninja");
+    }
+
+    let dst = dst
         .define("FAST_BUILD", "ON")
         .define("SHARED", "OFF")
         .define("CMAKE_MSVC_RUNTIME_LIBRARY", "MultiThreadedDLL")
