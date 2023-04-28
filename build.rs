@@ -6,6 +6,10 @@ use cmake::Config;
 fn main() {
     let mut dst = Config::new("HiGHS");
 
+    if cfg!(feature = "ninja") {
+        dst.generator("Ninja");
+    }
+
     // Avoid using downstream project's profile setting for HiGHS build.
     if cfg!(feature = "highs_release") {
         dst.profile("Release");
