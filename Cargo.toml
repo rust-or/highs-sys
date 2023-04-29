@@ -18,3 +18,4 @@ cmake = "0.1.49"
 [features]
 highs_release = []
 ninja = []
+libz = []
