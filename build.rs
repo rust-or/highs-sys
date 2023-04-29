@@ -46,6 +46,11 @@ fn main() {
 
     println!("cargo:rustc-link-search=native={}/lib", dst.display());
     println!("cargo:rustc-link-lib=static=highs");
+
+    if cfg!(feature = "libz") {
+        println!("cargo:rustc-link-lib=z");
+    }
+
     let target = env::var("TARGET").unwrap();
     let apple = target.contains("apple");
     let windows = target.contains("windows");
