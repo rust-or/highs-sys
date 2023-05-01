@@ -45,6 +45,21 @@ winget install -e --id Kitware.CMake
 winget install -e --id LLVM.LLVM
 ```
 
+#### Feature Flags
+
+`highs_release`: set CMake profile to "Release" regardless of build profile.
+`libz`: enable HiGHS libz linking to enable support for reading 'mps.gz'.
+`ninja`: set CMake generator to Ninja.
+
+Windows users will likely need to install libz and set the ZLIB_ROOT
+environment variable for CMake to locate and link with the library.
+
+Ninja is available in [winget](https://winget.run/).
+
+```powershell
+winget install -e --id Ninja-build.Ninja
+```
+
 HiGHS itself is built statically, so you don't need to install it
 separately on the target system.
 
