@@ -56,6 +56,7 @@ fn main() {
         .expect("Couldn't write bindings!");
 
     println!("cargo:rustc-link-search=native={}/lib", dst.display());
+    println!("cargo:rustc-link-search=native={}/lib64", dst.display());
     println!("cargo:rustc-link-lib=static=highs");
 
     if cfg!(feature = "libz") {
