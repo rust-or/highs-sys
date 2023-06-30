@@ -14,3 +14,8 @@ keywords = ["linear-programming", "optimization", "math", "solver"]
 [build-dependencies]
 bindgen = "0.63.0"
 cmake = "0.1.49"
+
+[features]
+highs_release = []
+ninja = []
+libz = []
