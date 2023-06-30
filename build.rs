@@ -4,7 +4,18 @@ use std::path::PathBuf;
 use cmake::Config;
 
 fn main() {
-    let dst = Config::new("HiGHS")
+    let mut dst = Config::new("HiGHS");
+
+    if cfg!(feature = "ninja") {
+        dst.generator("Ninja");
+    }
+
+    // Avoid using downstream project's profile setting for HiGHS build.
+    if cfg!(feature = "highs_release") {
+        dst.profile("Release");
+    }
+
+    let dst = dst
         .define("FAST_BUILD", "ON")
         .define("SHARED", "OFF")
         .define("CMAKE_MSVC_RUNTIME_LIBRARY", "MultiThreadedDLL")
@@ -46,6 +57,11 @@ fn main() {
 
     println!("cargo:rustc-link-search=native={}/lib", dst.display());
     println!("cargo:rustc-link-lib=static=highs");
+
+    if cfg!(feature = "libz") {
+        println!("cargo:rustc-link-lib=z");
+    }
+
     let target = env::var("TARGET").unwrap();
     let apple = target.contains("apple");
     let windows = target.contains("windows");
