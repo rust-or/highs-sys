@@ -1,6 +1,7 @@
 # highs-sys
 
 [![docs.rs badge](https://docs.rs/highs-sys/badge.svg)](https://docs.rs/highs-sys)
+[![rust crate](https://img.shields.io/crates/v/highs-sys.svg)](https://lib.rs/highs-sys)
 
 Rust binding for the HiGHS linear programming solver.
 See http://highs.dev.
