@@ -17,7 +17,7 @@ fn main() {
 
     let dst = dst
         .define("FAST_BUILD", "ON")
-        .define("SHARED", "OFF")
+        .define("BUILD_SHARED_LIBS", "OFF")
         .define("CMAKE_MSVC_RUNTIME_LIBRARY", "MultiThreadedDLL")
         .define("CMAKE_INTERPROCEDURAL_OPTIMIZATION", "FALSE")
         .build();
