@@ -13,12 +13,16 @@ You should clone it with
 git clone --recursive git@github.com:rust-or/highs-sys.git
 ```
 
-## Dependencies
+This crate can either use and link a version of HiGHS that is already installed and available on your system or build and statically link HiGHS itself.
 
-This library depends on libstdc++ and libgomp at runtime.
-In order to build, it requires cmake and a C++ compiler.
+## Usage
 
-#### Install on debian
+At runtime, HiGHS depends at the minimum on the C++ standard library and OMP.
+They need to be installed both on your system and any system you want to deploy your application to.
+
+How you install these depends on your operating system.
+
+#### Debian
 
 ```
 sudo apt-get install libstdc++6 libgomp1
@@ -26,16 +30,31 @@ sudo apt-get install libstdc++6 libgomp1
 
 (These are probably already installed on your system)
 
-#### Install on MacOS
+#### macOS
 
 ```
 brew install libomp
 ```
 
-HiGHS itself is built statically, so you don't need to install it
-separately on the target system.
+### Building HiGHS
 
-#### Install on Windows
+This crate can either build HiGHS itself and link it statically or [link against an already installed version]().
+To build HiGHS, you need at least a C++ compiler and cmake.
+Enabling additional features may incur additional runtime dependencies.
+
+#### Linux
+
+These can be easily installed using your distribution's package manager.
+For example, on Debian: `sudo apt install g++ cmake`.
+
+#### macOS
+
+To install a C++ compiler, run `xcode-select --install`.
+The easiest way to obtain cmake is via brew: `brew install cmake`.
+
+If you enable the `libz` or `ninja` features, you should also install these via brew.
+
+#### Windows
 
 You need to install [CMake](https://cmake.org/download/) and [Clang (available in LLVM)](https://releases.llvm.org/download.html).
 
@@ -46,23 +65,30 @@ winget install -e --id Kitware.CMake
 winget install -e --id LLVM.LLVM
 ```
 
-#### Feature Flags
-
-`highs_release`: set CMake profile to "Release" regardless of build profile.
-`libz`: enable HiGHS libz linking to enable support for reading 'mps.gz'.
-`ninja`: set CMake generator to Ninja.
-
-Windows users will likely need to install libz and set the ZLIB_ROOT
-environment variable for CMake to locate and link with the library.
-
-Ninja is available in [winget](https://winget.run/).
+If you enable the Ninja feature, you can also obtain Ninja from winget:
 
 ```powershell
 winget install -e --id Ninja-build.Ninja
 ```
 
-HiGHS itself is built statically, so you don't need to install it
-separately on the target system.
+If desired, libz needs to be installed and made discoverable by setting the `ZLIB_ROOT` environment variable.
+
+### Using a pre-installed version of HiGHS
+
+Rather than building HiGHS, you can link against a version you have already installed on your system.
+To do that, install pkg-config on your system and enable the `discover` feature on this crate.
+
+This will generally cause HiGHS to be linked dynamically, which means it also needs to be installed on the system you deploy to.
+
+Note that at the time of writing, HiGHS is packaged in few package managers, so you may need to build and install HiGHS from source.
+
+#### Feature Flags
+
+`build` (enabled by default): build HiGHS and link it statically
+`highs_release`: set CMake profile to "Release" regardless of build profile; only takes effect when `build` is enabled.
+`libz`: enable HiGHS libz linking to enable support for reading 'mps.gz'; only takes effect when `build` is enabled.
+`ninja`: set CMake generator to Ninja; only takes effect when `build` is enabled.
+`discover`: use pkg-config to discover and link against an already installed version of HiGHS; takes precedence over `build` if both are enabled
 
 ## Example
 

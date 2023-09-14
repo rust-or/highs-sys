@@ -13,9 +13,13 @@ keywords = ["linear-programming", "optimization", "math", "solver"]
 
 [build-dependencies]
 bindgen = "0.63.0"
-cmake = "0.1.49"
+cmake = { version = "0.1.49", optional = true }
+pkg-config = { version = "0.3.27", optional = true }
 
 [features]
+default = ["build", "highs_release"]
+discover = ["pkg-config"]
+build = ["cmake"]
 highs_release = []
 ninja = []
 libz = []
