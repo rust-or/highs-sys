@@ -37,3 +37,13 @@ jobs:
       run: cargo build
     - name: Run tests
       run: cargo test
+    - name: Build with system-installed HiGHS
+      if: matrix.config.os != 'windows-latest'
+      run: |
+        cd HiGHS
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        cmake --build build
+        sudo cmake --install build
+        cd ..
+        cargo clean
+        cargo build --no-default-features --features "discover"
