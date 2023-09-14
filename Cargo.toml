@@ -18,8 +18,8 @@ pkg-config = { version = "0.3.27", optional = true }
 
 [features]
 default = ["build", "highs_release"]
-discover = ["pkg-config"]
-build = ["cmake"]
+discover = ["dep:pkg-config"]
+build = ["dep:cmake"]
 highs_release = []
 ninja = []
 libz = []
