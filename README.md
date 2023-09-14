@@ -38,7 +38,7 @@ brew install libomp
 
 ### Building HiGHS
 
-This crate can either build HiGHS itself and link it statically or [link against an already installed version]().
+This crate can either build HiGHS itself and link it statically or [link against an already installed version](#using-a-pre-installed-version-of-highs).
 To build HiGHS, you need at least a C++ compiler and cmake.
 Enabling additional features may incur additional runtime dependencies.
 
