@@ -66,7 +66,6 @@ fn build() -> bool {
 
     let target = env::var("TARGET").unwrap();
     let apple = target.contains("apple");
-    let windows = target.contains("windows");
     let linux = target.contains("linux");
     if apple {
         println!("cargo:rustc-link-lib=dylib=c++");
