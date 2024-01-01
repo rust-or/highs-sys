@@ -73,12 +73,6 @@ fn build() -> bool {
     } else if linux {
         println!("cargo:rustc-link-lib=dylib=stdc++");
     }
-    if apple {
-        println!("cargo:rustc-link-lib=dylib=omp");
-    } else if !windows {
-        // No openmp 3 on windows
-        println!("cargo:rustc-link-lib=dylib=gomp");
-    }
     println!("cargo:rerun-if-changed=HiGHS/src/interfaces/highs_c_api.h");
 
     true
