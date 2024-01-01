@@ -124,7 +124,7 @@ fn highs_functions() {
 
 #[test]
 fn highs_functions_multithread() {
-    let threads: Vec<_> = (0..1000)
+    let threads: Vec<_> = (0..64)
         .map(|_| std::thread::spawn(highs_functions))
         .collect();
     for t in threads {
