@@ -25,16 +25,14 @@ How you install these depends on your operating system.
 #### Debian
 
 ```
-sudo apt-get install libstdc++6 libgomp1
+sudo apt-get install libstdc++6
 ```
 
 (These are probably already installed on your system)
 
 #### macOS
 
-```
-brew install libomp
-```
+The required libraries should already be installed.
 
 ### Building HiGHS
 
