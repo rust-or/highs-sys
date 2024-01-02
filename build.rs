@@ -1,6 +1,6 @@
 use std::env;
 use std::fs::write;
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 
 fn generate_bindings<'a>(include_paths: impl Iterator<Item = &'a Path>) {
     // First, we write a trivial wrapper header so that the HiGHS headers can be discovered from
@@ -12,14 +12,16 @@ fn generate_bindings<'a>(include_paths: impl Iterator<Item = &'a Path>) {
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for
     // the resulting bindings.
-    let builder = include_paths.fold(bindgen::Builder::default(), |builder, path| builder.clang_arg(format!("-I{}", path.to_string_lossy())));
+    let builder = include_paths.fold(bindgen::Builder::default(), |builder, path| {
+        builder.clang_arg(format!("-I{}", path.to_string_lossy()))
+    });
     let c_bindings = builder
         // The input header we would like to generate
         // bindings for.
         .header(wrapper_path.to_string_lossy())
         // Tell cargo to invalidate the built crate whenever any of the
         // included header files changed.
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         // Finish the builder and generate the bindings.
         .generate()
         // Unwrap the Result and panic on failure.
@@ -84,15 +86,17 @@ fn build() -> bool {
 
 #[cfg(feature = "discover")]
 fn discover() -> bool {
-    let lib = match pkg_config::Config::new().atleast_version("1.5.0").probe("highs") {
+    let lib = match pkg_config::Config::new()
+        .atleast_version("1.5.0")
+        .probe("highs")
+    {
         Ok(lib) => lib,
         Err(_e) => return false,
     };
 
     generate_bindings(lib.include_paths.iter().map(|p| p.as_path()));
 
-   true 
-
+    true
 }
 
 #[cfg(not(feature = "discover"))]
@@ -101,7 +105,14 @@ fn discover() -> bool {
 }
 
 fn main() {
-    if cfg!(all(any(feature = "highs_release", feature = "libz", feature = "ninja"), not(feature = "build"))) {
+    if cfg!(all(
+        any(
+            feature = "highs_release",
+            feature = "libz",
+            feature = "ninja"
+        ),
+        not(feature = "build")
+    )) {
         panic!("You have enabled features that control how HiGHS is built, but have not enabled the 'build' feature.\n\
                Thus, your features will never have any effect. Please enable the 'build' feature on highs-sys if you want to build HiGHS or disable the 'libz', 'ninja' and 'highs_release' features.");
     }

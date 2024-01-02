@@ -12,7 +12,7 @@ keywords = ["linear-programming", "optimization", "math", "solver"]
 [dependencies]
 
 [build-dependencies]
-bindgen = "0.68.0"
+bindgen = "0.69.1"
 cmake = { version = "0.1.49", optional = true }
 pkg-config = { version = "0.3.27", optional = true }
 
