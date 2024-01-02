@@ -17,24 +17,22 @@ This crate can either use and link a version of HiGHS that is already installed 
 
 ## Usage
 
-At runtime, HiGHS depends at the minimum on the C++ standard library and OMP.
-They need to be installed both on your system and any system you want to deploy your application to.
+At runtime, HiGHS depends at the minimum on the C++ standard library.
+It needs to be installed both on your system and any system you want to deploy your application to.
 
 How you install these depends on your operating system.
 
 #### Debian
 
 ```
-sudo apt-get install libstdc++6 libgomp1
+sudo apt-get install libstdc++6
 ```
 
-(These are probably already installed on your system)
+(but it is probably already installed on your system)
 
 #### macOS
 
-```
-brew install libomp
-```
+libc++ comes by default when installing XCode.
 
 ### Building HiGHS
 

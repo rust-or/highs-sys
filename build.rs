@@ -66,18 +66,11 @@ fn build() -> bool {
 
     let target = env::var("TARGET").unwrap();
     let apple = target.contains("apple");
-    let windows = target.contains("windows");
     let linux = target.contains("linux");
     if apple {
         println!("cargo:rustc-link-lib=dylib=c++");
     } else if linux {
         println!("cargo:rustc-link-lib=dylib=stdc++");
-    }
-    if apple {
-        println!("cargo:rustc-link-lib=dylib=omp");
-    } else if !windows {
-        // No openmp 3 on windows
-        println!("cargo:rustc-link-lib=dylib=gomp");
     }
     println!("cargo:rerun-if-changed=HiGHS/src/interfaces/highs_c_api.h");
 
