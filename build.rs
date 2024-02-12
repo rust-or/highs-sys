@@ -1,14 +1,7 @@
 use std::env;
-use std::fs::write;
 use std::path::{Path, PathBuf};
 
 fn generate_bindings<'a>(include_paths: impl Iterator<Item = &'a Path>) {
-    // First, we write a trivial wrapper header so that the HiGHS headers can be discovered from
-    // the include path.
-    let mut wrapper_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-    wrapper_path.push("highs.h");
-    write(&wrapper_path, "#include <interfaces/highs_c_api.h>").unwrap();
-
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for
     // the resulting bindings.
@@ -16,9 +9,10 @@ fn generate_bindings<'a>(include_paths: impl Iterator<Item = &'a Path>) {
         builder.clang_arg(format!("-I{}", path.to_string_lossy()))
     });
     let c_bindings = builder
-        // The input header we would like to generate
-        // bindings for.
-        .header(wrapper_path.to_string_lossy())
+        // The input header we would like to generate bindings for.
+        // This is a trivial wrapper header so that the HiGHS headers
+        // can be discovered from the include path.
+        .header("wrapper.h")
         // Tell cargo to invalidate the built crate whenever any of the
         // included header files changed.
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
