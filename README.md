@@ -69,7 +69,7 @@ If you enable the Ninja feature, you can also obtain Ninja from winget:
 winget install -e --id Ninja-build.Ninja
 ```
 
-If desired, libz needs to be installed and made discoverable by setting the `ZLIB_ROOT` environment variable.
+If desired, libz needs to be installed and made discoverable by adding the `libz-sys` crate as a dependency in your project or manually setting up libz and setting the `ZLIB_ROOT` environment variable.
 
 ### Using a pre-installed version of HiGHS
 
