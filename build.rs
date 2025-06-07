@@ -47,6 +47,7 @@ fn build() -> bool {
         .define("BUILD_SHARED_LIBS", "OFF")
         .define("CMAKE_MSVC_RUNTIME_LIBRARY", "MultiThreadedDLL")
         .define("CMAKE_INTERPROCEDURAL_OPTIMIZATION", "FALSE")
+        .define("ZLIB", if cfg!(feature = "libz") { "ON" } else { "OFF" })
         .build();
 
     let include_path = dst.join("include").join("highs");
