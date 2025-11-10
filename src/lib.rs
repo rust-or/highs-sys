@@ -20,12 +20,19 @@ pub const MODEL_STATUS_OBJECTIVE_TARGET: HighsInt = 12;
 pub const MODEL_STATUS_REACHED_TIME_LIMIT: HighsInt = 13;
 pub const MODEL_STATUS_REACHED_ITERATION_LIMIT: HighsInt = 14;
 pub const MODEL_STATUS_UNKNOWN: HighsInt = 15;
+pub const MODEL_STATUS_REACHED_SOLUTION_LIMIT: HighsInt = 16;
+pub const MODEL_STATUS_REACHED_INTERRUPT: HighsInt = 17;
+pub const MODEL_STATUS_REACHED_MEMORY_LIMIT: HighsInt = 18;
 pub const MODEL_STATUS_MIN: HighsInt = MODEL_STATUS_NOTSET;
-pub const MODEL_STATUS_MAX: HighsInt = MODEL_STATUS_UNKNOWN;
+pub const MODEL_STATUS_MAX: HighsInt = MODEL_STATUS_REACHED_MEMORY_LIMIT;
 
 pub const STATUS_OK: HighsInt = 0;
 pub const STATUS_WARNING: HighsInt = 1;
 pub const STATUS_ERROR: HighsInt = -1;
+
+pub const SOLUTION_STATUS_NONE: HighsInt = 0;
+pub const SOLUTION_STATUS_INFEASIBLE: HighsInt = 1;
+pub const SOLUTION_STATUS_FEASIBLE: HighsInt = 2;
 
 pub const MATRIX_FORMAT_NONE: HighsInt = 0;
 pub const MATRIX_FORMAT_COLUMN_WISE: HighsInt = 1;
