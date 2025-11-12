@@ -99,9 +99,9 @@ fn build() -> bool {
     let linux = target.contains("linux");
     let mingw = target.contains("pc-windows-gnu");
     if apple {
-        println!("cargo:rustc-link-lib=dylib=c++");
+        println!("cargo:rustc-link-lib=c++");
     } else if linux || mingw {
-        println!("cargo:rustc-link-lib=dylib=stdc++");
+        println!("cargo:rustc-link-lib=stdc++");
     }
     println!("cargo:rerun-if-changed=HiGHS/highs/interfaces/highs_c_api.h");
 
@@ -142,8 +142,10 @@ fn main() {
         ),
         not(feature = "build")
     )) {
-        panic!("You have enabled features that control how HiGHS is built, but have not enabled the 'build' feature.\n\
-               Thus, your features will never have any effect. Please enable the 'build' feature on highs-sys if you want to build HiGHS or disable the 'libz', 'ninja' and 'highs_release' features.");
+        panic!(
+            "You have enabled features that control how HiGHS is built, but have not enabled the 'build' feature.\n\
+               Thus, your features will never have any effect. Please enable the 'build' feature on highs-sys if you want to build HiGHS or disable the 'libz', 'ninja' and 'highs_release' features."
+        );
     }
 
     if !discover() && !build() {
