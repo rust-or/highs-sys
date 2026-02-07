@@ -36,11 +36,24 @@ fn generate_bindings<'a>(
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for
     // the resulting bindings.
-    let builder = include_paths
+    let mut builder = include_paths
         .into_iter()
         .fold(bindgen::Builder::default(), |builder, path| {
             builder.clang_arg(format!("-I{}", path.to_string_lossy()))
         });
+    if env::var("TARGET")
+        .map(|target| target.contains("emscripten"))
+        .unwrap_or(false)
+    {
+        println!("cargo:rerun-if-env-changed=EMSDK");
+        if let Ok(emsdk) = env::var("EMSDK") {
+            let sysroot = Path::new(&emsdk).join("upstream/emscripten/cache/sysroot");
+            if sysroot.is_dir() {
+                builder = builder.clang_arg(format!("--sysroot={}", sysroot.display()));
+            }
+        }
+    }
+
     let c_bindings = builder
         // The input header we would like to generate bindings for.
         // This is a trivial wrapper header so that the HiGHS headers
@@ -64,10 +77,21 @@ fn generate_bindings<'a>(
 #[cfg(feature = "build")]
 fn build() -> bool {
     use cmake::Config;
+    let target = env::var("TARGET").unwrap();
+    let emscripten = target.contains("emscripten");
     let mut dst = Config::new("HiGHS");
 
     if cfg!(feature = "ninja") {
         dst.generator("Ninja");
+    }
+
+    // `cmake` crate default C++ flags inject `-fno-exceptions` for this target,
+    // but HiGHS requires C++ exceptions. Use explicit flags for emscripten.
+    if emscripten {
+        dst.no_default_flags(true);
+        dst.cxxflag("-fexceptions");
+        dst.define("BUILD_CXX_EXE", "OFF");
+        dst.define("BUILD_EXAMPLES", "OFF");
     }
 
     // Avoid using downstream project's profile setting for HiGHS build.
@@ -94,11 +118,10 @@ fn build() -> bool {
         println!("cargo:rustc-link-lib=z");
     }
 
-    let target = env::var("TARGET").unwrap();
     let apple = target.contains("apple");
     let linux = target.contains("linux");
     let mingw = target.contains("pc-windows-gnu");
-    if apple {
+    if apple || emscripten {
         println!("cargo:rustc-link-lib=c++");
     } else if linux || mingw {
         println!("cargo:rustc-link-lib=stdc++");
