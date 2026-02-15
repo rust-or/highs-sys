@@ -65,5 +65,4 @@ jobs:
     - name: Build wasm32-unknown-emscripten
       run: |
         rustup target add wasm32-unknown-emscripten
-        cargo clean
-        cargo build --release --target wasm32-unknown-emscripten
+        cargo build --target wasm32-unknown-emscripten
