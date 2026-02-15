@@ -47,3 +47,22 @@ jobs:
         cd ..
         cargo clean
         cargo build --no-default-features --features "discover"
+
+  wasm-emscripten:
+    runs-on: ubuntu-latest
+    env:
+      EMSDK_VERSION: 5.0.0
+      EMSDK_CACHE_FOLDER: emsdk-cache
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    - name: Setup emsdk
+      uses: pyodide/setup-emsdk@v15
+      with:
+        version: ${{ env.EMSDK_VERSION }}
+        actions-cache-folder: ${{ env.EMSDK_CACHE_FOLDER }}
+    - name: Build wasm32-unknown-emscripten
+      run: |
+        rustup target add wasm32-unknown-emscripten
+        cargo build --target wasm32-unknown-emscripten
