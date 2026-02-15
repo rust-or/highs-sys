@@ -51,7 +51,7 @@ jobs:
   wasm-emscripten:
     runs-on: ubuntu-latest
     env:
-      EMSDK_VERSION: 4.0.23
+      EMSDK_VERSION: 5.0.0
       EMSDK_CACHE_FOLDER: emsdk-cache
     steps:
     - uses: actions/checkout@v4
