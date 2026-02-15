@@ -50,18 +50,20 @@ jobs:
 
   wasm-emscripten:
     runs-on: ubuntu-latest
+    env:
+      EMSDK_VERSION: 4.0.23
+      EMSDK_CACHE_FOLDER: emsdk-cache
     steps:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
-    - name: Install emsdk
-      run: |
-        git clone https://github.com/emscripten-core/emsdk.git
-        ./emsdk/emsdk install latest
-        ./emsdk/emsdk activate latest
+    - name: Setup emsdk
+      uses: mymindstorm/setup-emsdk@v14
+      with:
+        version: ${{ env.EMSDK_VERSION }}
+        actions-cache-folder: ${{ env.EMSDK_CACHE_FOLDER }}
     - name: Build wasm32-unknown-emscripten
       run: |
-        EMSDK_QUIET=1 source ./emsdk/emsdk_env.sh
         rustup target add wasm32-unknown-emscripten
         cargo clean
         cargo build --release --target wasm32-unknown-emscripten
