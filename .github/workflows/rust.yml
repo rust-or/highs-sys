@@ -58,7 +58,7 @@ jobs:
       with:
         submodules: recursive
     - name: Setup emsdk
-      uses: mymindstorm/setup-emsdk@v14
+      uses: pyodide/setup-emsdk@v15
       with:
         version: ${{ env.EMSDK_VERSION }}
         actions-cache-folder: ${{ env.EMSDK_CACHE_FOLDER }}
