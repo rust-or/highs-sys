@@ -33,28 +33,32 @@ fn generate_bindings<'a>(
     exclude_dir: Option<PathBuf>,
     include_paths: impl IntoIterator<Item = &'a Path>,
 ) {
+    let target = env::var("TARGET").unwrap();
+    let emscripten = target.contains("emscripten");
+
     // The bindgen::Builder is the main entry point
     // to bindgen, and lets you build up options for
     // the resulting bindings.
-    let mut builder = include_paths
+    let builder = include_paths
         .into_iter()
         .fold(bindgen::Builder::default(), |builder, path| {
             builder.clang_arg(format!("-I{}", path.to_string_lossy()))
         });
 
-    if env::var("TARGET").unwrap().contains("emscripten") {
-        println!("cargo:rerun-if-env-changed=EMSDK");
-        let emsdk = env::var("EMSDK")
-            .expect("TARGET is emscripten but EMSDK is not set; needed for bindgen sysroot");
-        let sysroot = Path::new(&emsdk).join("upstream/emscripten/cache/sysroot");
-        if !sysroot.is_dir() {
-            panic!(
-                "TARGET is emscripten but EMSDK sysroot is missing: {}",
-                sysroot.display()
-            );
-        }
-        builder = builder.clang_arg(format!("--sysroot={}", sysroot.display()));
-    }
+    // Work around bindgen/libclang missing `Highs_*` function declarations for
+    // `wasm32-unknown-emscripten` when parsing with emscripten's sysroot.
+    // The C API signatures are target-independent, so parse as host and skip
+    // cross-target layout assertions.
+    let builder = if emscripten {
+        println!("cargo:rerun-if-env-changed=HOST");
+        let host = env::var("HOST")
+            .expect("TARGET is emscripten but HOST is not set; needed for bindgen host parsing");
+        builder
+            .clang_arg(format!("--target={host}"))
+            .layout_tests(false)
+    } else {
+        builder
+    };
 
     let c_bindings = builder
         // The input header we would like to generate bindings for.
