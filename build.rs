@@ -109,7 +109,14 @@ fn build() -> bool {
     let dst = dst
         .define("FAST_BUILD", "ON")
         .define("BUILD_SHARED_LIBS", "OFF")
-        .define("CMAKE_MSVC_RUNTIME_LIBRARY", "MultiThreadedDLL")
+        .define(
+            "CMAKE_MSVC_RUNTIME_LIBRARY",
+            if cfg!(feature = "crt-static") {
+                "MultiThreaded"
+            } else {
+                "MultiThreadedDLL"
+            },
+        )
         .define("CMAKE_INTERPROCEDURAL_OPTIMIZATION", "FALSE")
         .define("ZLIB", if cfg!(feature = "libz") { "ON" } else { "OFF" })
         .build();
