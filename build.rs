@@ -106,10 +106,17 @@ fn build() -> bool {
         dst.profile("Release");
     }
 
+    // if crt-static enabled
+    let target_feature = env::var("CARGO_CFG_TARGET_FEATURE").unwrap_or_default();
+    if target_feature.contains("crt-static") {
+        dst.define("CMAKE_MSVC_RUNTIME_LIBRARY", "MultiThreaded");
+    } else {
+        dst.define("CMAKE_MSVC_RUNTIME_LIBRARY", "MultiThreadedDLL");
+    }
+
     let dst = dst
         .define("FAST_BUILD", "ON")
         .define("BUILD_SHARED_LIBS", "OFF")
-        .define("CMAKE_MSVC_RUNTIME_LIBRARY", "MultiThreadedDLL")
         .define("CMAKE_INTERPROCEDURAL_OPTIMIZATION", "FALSE")
         .define("ZLIB", if cfg!(feature = "libz") { "ON" } else { "OFF" })
         .build();
