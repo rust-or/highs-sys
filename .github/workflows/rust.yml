@@ -37,6 +37,11 @@ jobs:
       run: cargo build
     - name: Run tests
       run: cargo test
+    - name: Run tests with static CRT
+      if: matrix.config.os == 'windows-latest'
+      env:
+        RUSTFLAGS: -C target-feature=+crt-static
+      run: cargo test
     - name: Build with system-installed HiGHS
       if: matrix.config.os != 'windows-latest'
       run: |
