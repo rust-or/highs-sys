@@ -1,5 +1,6 @@
 use std::env;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 fn target_has_feature(feature: &str) -> bool {
     env::var("CARGO_CFG_TARGET_FEATURE")
@@ -178,6 +179,28 @@ fn discover() -> bool {
     false
 }
 
+fn update_submodules<P: AsRef<Path>>(work_dir: P) {
+    let program = "git";
+    let args = ["submodule", "update", "--init"];
+    println!(
+        "Running command: \"{} {}\" in dir: {}",
+        program,
+        args.join(" "),
+        work_dir.as_ref().display()
+    );
+    let ret = Command::new(program)
+        .current_dir(work_dir.as_ref())
+        .args(args)
+        .status();
+
+    match ret.map(|status| (status.success(), status.code())) {
+        Ok((true, _)) => (),
+        Ok((false, Some(c))) => panic!("Command failed with error code {}", c),
+        Ok((false, None)) => panic!("Command got killed"),
+        Err(e) => panic!("Command failed with error: {}", e),
+    }
+}
+
 fn main() {
     println!("cargo:rerun-if-env-changed=CARGO_CFG_TARGET_FEATURE");
 
@@ -196,6 +219,11 @@ fn main() {
 \
                Thus, your features will never have any effect. Please enable the 'build' feature on highs-sys if you want to build HiGHS or disable the 'libz', 'ninja' and 'highs_release' features."
         );
+    }
+
+    #[cfg(feature = "build")]
+    if !Path::new("HiGHS/highs").exists() {
+        update_submodules(env::var("CARGO_MANIFEST_DIR").unwrap());
     }
 
     if cfg!(feature = "discover") && crt_static {
