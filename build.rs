@@ -1,6 +1,5 @@
 use std::env;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 fn target_has_feature(feature: &str) -> bool {
     env::var("CARGO_CFG_TARGET_FEATURE")
@@ -179,7 +178,10 @@ fn discover() -> bool {
     false
 }
 
+#[cfg(feature = "build")]
 fn update_submodules<P: AsRef<Path>>(work_dir: P) {
+    use std::process::Command;
+
     let program = "git";
     let args = ["submodule", "update", "--init"];
     println!(
