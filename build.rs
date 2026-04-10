@@ -199,10 +199,8 @@ fn main() {
     }
 
     if cfg!(feature = "discover") && crt_static {
-        panic!(
-            "You have enabled Rust's 'crt-static' target feature, but also enabled the 'discover' feature.
-\
-               Discovering a system-installed HiGHS bypasses the bundled build, so highs-sys cannot ensure that HiGHS uses the same MSVC runtime. Please disable 'discover' when using '-C target-feature=+crt-static'."
+        println!(
+            "cargo::warning=You have enabled Rust's 'crt-static' target feature, but also enabled the 'discover' feature. Discovering a system-installed HiGHS bypasses the bundled build, so highs-sys cannot ensure that HiGHS uses the same MSVC runtime. Please disable 'discover' when using '-C target-feature=+crt-static'."
         );
     }
 
