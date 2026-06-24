@@ -122,6 +122,105 @@ fn highs_functions() {
     }
 }
 
+#[test]
+fn semi_continuous_variable() {
+    // min x  s.t.  x >= 3,  x semicontinuous in {0} U [5, 10].
+    unsafe {
+        let highs = Highs_create();
+        let opt = CString::new("output_flag").unwrap();
+        Highs_setBoolOptionValue(highs, opt.as_ptr(), 0);
+        let inf = Highs_getInfinity(highs);
+
+        assert_eq!(
+            STATUS_OK,
+            Highs_addCol(highs, 1.0, 5.0, 10.0, 0, std::ptr::null(), std::ptr::null()),
+            "addCol"
+        );
+        // x >= 3
+        let idx: &mut [HighsInt] = &mut [0];
+        let val: &mut [f64] = &mut [1.0];
+        assert_eq!(
+            STATUS_OK,
+            Highs_addRow(highs, 3.0, inf, 1, ptr(idx), ptr(val)),
+            "addRow"
+        );
+        // x semicont
+        assert_eq!(
+            STATUS_OK,
+            Highs_changeColIntegrality(highs, 0, VAR_TYPE_SEMI_CONTINUOUS),
+            "changeColIntegrality"
+        );
+        assert_eq!(Highs_run(highs), STATUS_OK, "run");
+        assert_eq!(Highs_getModelStatus(highs), MODEL_STATUS_OPTIMAL, "status");
+
+        let colvalue: &mut [f64] = &mut [0.; 1];
+        let coldual: &mut [f64] = &mut [0.; 1];
+        let rowvalue: &mut [f64] = &mut [0.; 1];
+        let rowdual: &mut [f64] = &mut [0.; 1];
+        Highs_getSolution(
+            highs,
+            ptr(colvalue),
+            ptr(coldual),
+            ptr(rowvalue),
+            ptr(rowdual),
+        );
+        assert!((colvalue[0] - 5.0).abs() < 1e-6, "x = {}", colvalue[0]);
+
+        Highs_destroy(highs);
+    }
+}
+
+#[test]
+fn semi_integer_variable() {
+    // max x  s.t.  x <= 7.5,  x semi-integer in {0} U {5, 6, ..., 10}.
+    unsafe {
+        let highs = Highs_create();
+        let opt = CString::new("output_flag").unwrap();
+        Highs_setBoolOptionValue(highs, opt.as_ptr(), 0);
+        let inf = Highs_getInfinity(highs);
+
+        assert_eq!(
+            STATUS_OK,
+            Highs_addCol(highs, 1.0, 5.0, 10.0, 0, std::ptr::null(), std::ptr::null()),
+            "addCol"
+        );
+        // x <= 7.5.
+        let idx: &mut [HighsInt] = &mut [0];
+        let val: &mut [f64] = &mut [1.0];
+        assert_eq!(
+            STATUS_OK,
+            Highs_addRow(highs, -inf, 7.5, 1, ptr(idx), ptr(val)),
+            "addRow"
+        );
+        assert_eq!(
+            STATUS_OK,
+            Highs_changeColIntegrality(highs, 0, VAR_TYPE_SEMI_INTEGER),
+            "changeColIntegrality"
+        );
+        assert_eq!(
+            Highs_changeObjectiveSense(highs, OBJECTIVE_SENSE_MAXIMIZE),
+            STATUS_OK
+        );
+        assert_eq!(Highs_run(highs), STATUS_OK, "run");
+        assert_eq!(Highs_getModelStatus(highs), MODEL_STATUS_OPTIMAL, "status");
+
+        let colvalue: &mut [f64] = &mut [0.; 1];
+        let coldual: &mut [f64] = &mut [0.; 1];
+        let rowvalue: &mut [f64] = &mut [0.; 1];
+        let rowdual: &mut [f64] = &mut [0.; 1];
+        Highs_getSolution(
+            highs,
+            ptr(colvalue),
+            ptr(coldual),
+            ptr(rowvalue),
+            ptr(rowdual),
+        );
+        assert!((colvalue[0] - 7.0).abs() < 1e-6, "x = {}", colvalue[0]);
+
+        Highs_destroy(highs);
+    }
+}
+
 #[cfg(not(target_os = "windows"))] // broken on windows
 #[test]
 fn highs_functions_multithread() {

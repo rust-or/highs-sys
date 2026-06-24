@@ -40,3 +40,12 @@ pub const MATRIX_FORMAT_ROW_WISE: HighsInt = 2;
 
 pub const OBJECTIVE_SENSE_MINIMIZE: HighsInt = 1;
 pub const OBJECTIVE_SENSE_MAXIMIZE: HighsInt = -1;
+
+// Variable types, as used in the `integrality` array passed to `Highs_passMip`
+// and in `Highs_changeColIntegrality`. These mirror the `kHighsVarType*`
+// constants in HiGHS' C API.
+pub const VAR_TYPE_CONTINUOUS: HighsInt = 0;
+pub const VAR_TYPE_INTEGER: HighsInt = 1;
+pub const VAR_TYPE_SEMI_CONTINUOUS: HighsInt = 2;
+pub const VAR_TYPE_SEMI_INTEGER: HighsInt = 3;
+pub const VAR_TYPE_IMPLICIT_INTEGER: HighsInt = 4;
