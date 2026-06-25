@@ -8,6 +8,10 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  RUSTC_WRAPPER: sccache
+  SCCACHE_GHA_ENABLED: "true"
+  CMAKE_C_COMPILER_LAUNCHER: sccache
+  CMAKE_CXX_COMPILER_LAUNCHER: sccache
 
 jobs:
   build:
@@ -31,6 +35,8 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
+    - name: Setup sccache
+      uses: mozilla-actions/sccache-action@v0.0.9
     - name: Cache Rust dependencies
       uses: Swatinem/rust-cache@v2
     - name: install dependencies
@@ -54,6 +60,8 @@ jobs:
         cd ..
         cargo clean
         cargo build --no-default-features --features "discover"
+    - name: Show sccache stats
+      run: sccache --show-stats
 
   wasm-emscripten:
     runs-on: ubuntu-latest
@@ -64,6 +72,8 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: recursive
+    - name: Setup sccache
+      uses: mozilla-actions/sccache-action@v0.0.9
     - name: Cache Rust dependencies
       uses: Swatinem/rust-cache@v2
     - name: Setup emsdk
@@ -75,3 +85,5 @@ jobs:
       run: |
         rustup target add wasm32-unknown-emscripten
         cargo build --target wasm32-unknown-emscripten
+    - name: Show sccache stats
+      run: sccache --show-stats
