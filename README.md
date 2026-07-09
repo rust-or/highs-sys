@@ -87,6 +87,38 @@ Note that at the time of writing, HiGHS is packaged in few package managers, so 
 `libz`: enable HiGHS libz linking to enable support for reading 'mps.gz'; only takes effect when `build` is enabled.
 `ninja`: set CMake generator to Ninja; only takes effect when `build` is enabled.
 `discover`: use pkg-config to discover and link against an already installed version of HiGHS; takes precedence over `build` if both are enabled
+`hipo`: build and link HiGHS' HiPO interior-point solver (HiGHS >= 1.14); only takes effect when `build` is enabled. See below.
+
+### HiPO interior-point solver
+
+Enabling the `hipo` feature compiles HiGHS with `-DHIPO=ON` and links its
+Apache/BSD-licensed dependencies (the `highs_extras` library, built statically)
+along with a BLAS backend. Once enabled, the solver can be selected at runtime
+by setting the `solver` option to `"hipo"`.
+
+HiPO requires a BLAS. The build preserves the flexibility of HiGHS' own CMake
+(`FindHipoDeps.cmake`) by forwarding the relevant knobs through environment
+variables, so you are not locked into a single BLAS strategy:
+
+| Environment variable | Effect |
+| --- | --- |
+| `HIGHS_BUILD_OPENBLAS` | `1`/`0` — whether HiGHS fetches and builds OpenBLAS via CMake `FetchContent`. Defaults to on (except on Apple). A convenient fallback when no system BLAS is available. |
+| `HIGHS_BLA_VENDOR` | Sets CMake `BLA_VENDOR` to select a system BLAS (e.g. `OpenBLAS`, `Intel10_64lp` for MKL). |
+| `HIGHS_BLAS_ROOT` | Sets CMake `BLAS_ROOT` to point at a custom BLAS install; its `lib`/`lib64` dirs are added to the link search path. |
+| `HIGHS_NO_AVX512` | `1` — build OpenBLAS without AVX512 (works around register-spill issues on some CPUs). |
+| `HIGHS_BLAS_LINK` | Explicit link spec(s), space/comma/semicolon separated, e.g. `static=openblas`, `dylib=mkl_rt`, `framework=Accelerate`. Overrides the default link line for custom or system BLAS installs. |
+
+Defaults:
+
+- **Apple targets** use the system Accelerate framework (always present); no
+  OpenBLAS is built.
+- **All other targets** fetch and build OpenBLAS by default, so no system BLAS
+  needs to be installed. To use a system BLAS instead, set
+  `HIGHS_BUILD_OPENBLAS=0` together with `HIGHS_BLA_VENDOR`/`HIGHS_BLAS_ROOT`
+  and, if needed, `HIGHS_BLAS_LINK`.
+
+Note that HiPO's dependencies carry Apache/BSD licenses, distinct from HiGHS'
+MIT license; see HiGHS' `THIRD_PARTY_NOTICES.md`.
 
 ## Example
 

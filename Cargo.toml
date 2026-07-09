@@ -23,3 +23,13 @@ build = ["dep:cmake"]
 highs_release = []
 ninja = []
 libz = []
+# Enable HiGHS' HiPO interior-point solver (HiGHS >= 1.14). Requires the
+# `build` feature: HiPO is wired up via cmake (-DHIPO=ON) and needs a BLAS.
+#
+# The BLAS backend is fully configurable through HiGHS' own cmake, exposed
+# via environment variables (see README): HIGHS_BUILD_OPENBLAS,
+# HIGHS_BLA_VENDOR, HIGHS_BLAS_ROOT, HIGHS_NO_AVX512 and HIGHS_BLAS_LINK.
+# By default, HiGHS fetches and builds OpenBLAS (a convenient fallback when
+# no system BLAS is available), except on Apple targets where the system
+# Accelerate framework is used.
+hipo = ["build"]

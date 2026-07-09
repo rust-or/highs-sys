@@ -87,11 +87,128 @@ fn generate_bindings<'a>(
         .expect("Couldn't write bindings!");
 }
 
+/// Read an environment variable that configures the HiPO BLAS backend,
+/// registering a `rerun-if-env-changed` directive so cargo rebuilds when it
+/// changes. Empty values are treated as unset.
+#[cfg(feature = "build")]
+fn hipo_env(key: &str) -> Option<String> {
+    println!("cargo:rerun-if-env-changed={key}");
+    env::var(key).ok().filter(|v| !v.trim().is_empty())
+}
+
+/// Interpret an environment variable as a boolean flag (accepts
+/// `1/on/true/yes`, case-insensitive).
+#[cfg(feature = "build")]
+fn hipo_env_bool(key: &str) -> Option<bool> {
+    hipo_env(key).map(|v| matches!(v.trim().to_ascii_lowercase().as_str(), "1" | "on" | "true" | "yes"))
+}
+
+/// Configure HiGHS' HiPO interior-point solver via cmake.
+///
+/// This deliberately preserves the flexibility of HiGHS' own cmake
+/// (`FindHipoDeps.cmake`): rather than hard-coding a single BLAS strategy, it
+/// forwards the relevant knobs so the user can point HiPO at whatever BLAS
+/// they have — a bundled OpenBLAS build, a `BLA_VENDOR` such as Intel MKL, or
+/// a `BLAS_ROOT` install — all through environment variables.
+///
+/// Returns whether HiGHS will fetch and build OpenBLAS itself (needed by the
+/// linking step). Returns `false` when the `hipo` feature is disabled.
+#[cfg(feature = "build")]
+fn configure_hipo(dst: &mut cmake::Config, apple: bool) -> bool {
+    if !cfg!(feature = "hipo") {
+        return false;
+    }
+
+    dst.define("HIPO", "ON");
+
+    // HiGHS ships its Apache/BSD-licensed HiPO dependencies ("extras") in a
+    // separate library that defaults to a *shared* `highs_extras` dylib loaded
+    // at runtime via dlopen. That doesn't work for a statically-linked -sys
+    // crate (the dylib wouldn't sit next to the consumer's binary), so build it
+    // statically and link it in below: HiGHS then compiles the extras straight
+    // into the build instead of dynamically loading them.
+    dst.define("BUILD_SHARED_EXTRAS_LIB", "OFF");
+
+    // Pass through the standard HiGHS/CMake BLAS knobs when the user set them.
+    if let Some(vendor) = hipo_env("HIGHS_BLA_VENDOR") {
+        dst.define("BLA_VENDOR", vendor);
+    }
+    if let Some(root) = hipo_env("HIGHS_BLAS_ROOT") {
+        dst.define("BLAS_ROOT", root);
+    }
+    if hipo_env_bool("HIGHS_NO_AVX512") == Some(true) {
+        dst.define("NO_AVX512", "ON");
+    }
+
+    // Decide whether HiGHS should fetch & build OpenBLAS. Default: yes, as a
+    // convenient fallback when no system BLAS is present — except on Apple,
+    // where HiGHS' cmake always uses the system Accelerate framework and forces
+    // BUILD_OPENBLAS off. The user can override with HIGHS_BUILD_OPENBLAS.
+    let build_openblas = hipo_env_bool("HIGHS_BUILD_OPENBLAS").unwrap_or(!apple) && !apple;
+    dst.define("BUILD_OPENBLAS", if build_openblas { "ON" } else { "OFF" });
+
+    build_openblas
+}
+
+/// Emit the link directives for the BLAS backend HiPO was built against.
+///
+/// `HIGHS_BLAS_LINK` is an escape hatch that always wins: a space/comma/
+/// semicolon separated list of `rustc-link-lib` specs (e.g.
+/// `static=openblas`, `dylib=mkl_rt`, `framework=Accelerate`) for custom or
+/// system BLAS installs. Otherwise sensible defaults are used.
+#[cfg(feature = "build")]
+fn link_hipo_blas(apple: bool, build_openblas: bool) {
+    if !cfg!(feature = "hipo") {
+        return;
+    }
+
+    // The static `highs_extras` library (HiPO's Apache/BSD-licensed deps: AMD,
+    // METIS, RCM, cblas shims) is installed into the HiGHS prefix and must be
+    // linked explicitly. It must come *before* BLAS on the link line since it
+    // references BLAS symbols.
+    println!("cargo:rustc-link-lib=static=highs_extras");
+
+    // A BLAS_ROOT install lives outside the HiGHS prefix, so add its lib dirs.
+    if let Some(root) = hipo_env("HIGHS_BLAS_ROOT") {
+        println!("cargo:rustc-link-search=native={root}/lib");
+        println!("cargo:rustc-link-search=native={root}/lib64");
+    }
+
+    if let Some(spec) = hipo_env("HIGHS_BLAS_LINK") {
+        for lib in spec
+            .split([',', ';', ' '])
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+        {
+            println!("cargo:rustc-link-lib={lib}");
+        }
+        return;
+    }
+
+    if apple {
+        // HiGHS' FindHipoDeps always links Accelerate on macOS.
+        println!("cargo:rustc-link-lib=framework=Accelerate");
+    } else if build_openblas {
+        // HiGHS installed the OpenBLAS static lib into the same prefix, whose
+        // lib/ and lib64/ dirs are already on the link search path.
+        println!("cargo:rustc-link-lib=static=openblas");
+    } else {
+        // A system BLAS was selected (via HIGHS_BLA_VENDOR / HIGHS_BLAS_ROOT)
+        // but no explicit link spec was given. Fall back to a shared `blas` and
+        // point the user at the override.
+        println!(
+            "cargo:warning=highs-sys: HiPO built against a non-bundled BLAS but HIGHS_BLAS_LINK is unset; defaulting to `-lblas`. Set HIGHS_BLAS_LINK (e.g. `static=openblas` or `dylib=mkl_rt`) if this is wrong."
+        );
+        println!("cargo:rustc-link-lib=dylib=blas");
+    }
+}
+
 #[cfg(feature = "build")]
 fn build() -> bool {
     use cmake::Config;
     let target = env::var("TARGET").unwrap();
     let emscripten = target.contains("emscripten");
+    let apple = target.contains("apple");
     let mut dst = Config::new("HiGHS");
     let crt_static = target_has_feature("crt-static");
 
@@ -113,6 +230,11 @@ fn build() -> bool {
     if cfg!(feature = "highs_release") {
         dst.profile("Release");
     }
+
+    // Configure the HiPO interior-point solver (and its BLAS backend) if the
+    // `hipo` feature is enabled. Returns whether HiGHS will build OpenBLAS
+    // itself, which the linking step below needs to know.
+    let hipo_build_openblas = configure_hipo(&mut dst, apple);
 
     let dst = dst
         .define("FAST_BUILD", "ON")
@@ -140,7 +262,9 @@ fn build() -> bool {
         println!("cargo:rustc-link-lib=z");
     }
 
-    let apple = target.contains("apple");
+    // Link the BLAS backend that HiPO was built against.
+    link_hipo_blas(apple, hipo_build_openblas);
+
     let linux = target.contains("linux");
     let mingw = target.contains("pc-windows-gnu");
     if apple || emscripten {
