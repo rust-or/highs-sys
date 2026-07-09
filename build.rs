@@ -103,20 +103,43 @@ fn hipo_env_bool(key: &str) -> Option<bool> {
     hipo_env(key).map(|v| matches!(v.trim().to_ascii_lowercase().as_str(), "1" | "on" | "true" | "yes"))
 }
 
-/// Configure HiGHS' HiPO interior-point solver via cmake.
+/// How HiGHS should obtain the BLAS backend that HiPO links against.
 ///
-/// This deliberately preserves the flexibility of HiGHS' own cmake
-/// (`FindHipoDeps.cmake`): rather than hard-coding a single BLAS strategy, it
-/// forwards the relevant knobs so the user can point HiPO at whatever BLAS
-/// they have — a bundled OpenBLAS build, a `BLA_VENDOR` such as Intel MKL, or
-/// a `BLAS_ROOT` install — all through environment variables.
-///
-/// Returns whether HiGHS will fetch and build OpenBLAS itself (needed by the
-/// linking step). Returns `false` when the `hipo` feature is disabled.
+/// The default (`DiscoverOrBuild`) defers to HiGHS' own cmake
+/// (`FindHipoDeps.cmake`) to find a system BLAS, and only builds a bundled
+/// OpenBLAS when none is found — rather than hard-coding a single strategy.
 #[cfg(feature = "build")]
-fn configure_hipo(dst: &mut cmake::Config, apple: bool) -> bool {
+#[derive(Clone, Copy)]
+enum HipoBlas {
+    /// The `hipo` feature is disabled; no BLAS is involved.
+    Disabled,
+    /// Let HiGHS' cmake discover a system BLAS (Accelerate on Apple, an
+    /// installed OpenBLAS/BLAS/MKL elsewhere). No OpenBLAS is built.
+    Discover,
+    /// Have HiGHS fetch and build its own static OpenBLAS.
+    BuildOpenblas,
+    /// Try `Discover` first; if cmake finds no BLAS, fall back to
+    /// `BuildOpenblas`. The default on non-Apple targets.
+    DiscoverOrBuild,
+}
+
+/// Configure HiGHS' HiPO interior-point solver via cmake and decide how its
+/// BLAS backend is obtained.
+///
+/// The guiding principle is to defer to HiGHS' own cmake (`FindHipoDeps.cmake`)
+/// for BLAS handling rather than hard-coding it: by default we let HiGHS
+/// *discover* a system BLAS and only build a bundled OpenBLAS when none is
+/// found. The user can pin the behaviour or point HiPO at a specific BLAS via
+/// environment variables (`HIGHS_BUILD_OPENBLAS`, `HIGHS_BLA_VENDOR`,
+/// `HIGHS_BLAS_ROOT`, `HIGHS_NO_AVX512`, `HIGHS_BLAS_LINK`).
+///
+/// Returns the chosen plan, which drives the (possibly two-pass) build and the
+/// link step. Returns `HipoBlas::Disabled` when the `hipo` feature is off.
+#[cfg(feature = "build")]
+#[cfg_attr(not(feature = "hipo"), allow(unused_variables))]
+fn configure_hipo(dst: &mut cmake::Config, apple: bool) -> HipoBlas {
     if !cfg!(feature = "hipo") {
-        return false;
+        return HipoBlas::Disabled;
     }
 
     dst.define("HIPO", "ON");
@@ -130,6 +153,7 @@ fn configure_hipo(dst: &mut cmake::Config, apple: bool) -> bool {
     dst.define("BUILD_SHARED_EXTRAS_LIB", "OFF");
 
     // Pass through the standard HiGHS/CMake BLAS knobs when the user set them.
+    // These feed HiGHS' own discovery logic in FindHipoDeps.cmake.
     if let Some(vendor) = hipo_env("HIGHS_BLA_VENDOR") {
         dst.define("BLA_VENDOR", vendor);
     }
@@ -140,24 +164,87 @@ fn configure_hipo(dst: &mut cmake::Config, apple: bool) -> bool {
         dst.define("NO_AVX512", "ON");
     }
 
-    // Decide whether HiGHS should fetch & build OpenBLAS. Default: yes, as a
-    // convenient fallback when no system BLAS is present — except on Apple,
-    // where HiGHS' cmake always uses the system Accelerate framework and forces
-    // BUILD_OPENBLAS off. The user can override with HIGHS_BUILD_OPENBLAS.
-    let build_openblas = hipo_env_bool("HIGHS_BUILD_OPENBLAS").unwrap_or(!apple) && !apple;
-    dst.define("BUILD_OPENBLAS", if build_openblas { "ON" } else { "OFF" });
+    // Decide how BLAS is obtained:
+    // - Apple always uses the system Accelerate framework (HiGHS forces
+    //   BUILD_OPENBLAS off), so plain discovery.
+    // - If the user pinned HIGHS_BUILD_OPENBLAS, honour it exactly.
+    // - Otherwise default to "discover a system BLAS, build OpenBLAS if none is
+    //   found".
+    match (apple, hipo_env_bool("HIGHS_BUILD_OPENBLAS")) {
+        (true, _) => HipoBlas::Discover,
+        (false, Some(true)) => HipoBlas::BuildOpenblas,
+        (false, Some(false)) => HipoBlas::Discover,
+        (false, None) => HipoBlas::DiscoverOrBuild,
+    }
+}
 
-    build_openblas
+/// Run the cmake build honouring the BLAS `plan`, retrying with a bundled
+/// OpenBLAS if system-BLAS discovery fails. Returns the install prefix and
+/// whether OpenBLAS ended up being built (which the link step needs to know).
+#[cfg(feature = "build")]
+fn build_highs_with_blas(dst: &mut cmake::Config, plan: HipoBlas) -> (PathBuf, bool) {
+    match plan {
+        HipoBlas::Disabled => (dst.build(), false),
+        HipoBlas::Discover => {
+            dst.define("BUILD_OPENBLAS", "OFF");
+            (dst.build(), false)
+        }
+        HipoBlas::BuildOpenblas => {
+            dst.define("BUILD_OPENBLAS", "ON");
+            (dst.build(), true)
+        }
+        HipoBlas::DiscoverOrBuild => {
+            // First let HiGHS try to discover an installed BLAS.
+            dst.define("BUILD_OPENBLAS", "OFF");
+            match try_cmake_build(dst) {
+                Ok(out) => (out, false),
+                Err(()) => {
+                    println!(
+                        "cargo:warning=highs-sys: HiGHS' cmake found no system BLAS; building the bundled OpenBLAS instead. Set HIGHS_BLA_VENDOR/HIGHS_BLAS_ROOT to use a system BLAS, or HIGHS_BUILD_OPENBLAS=1 to skip this probe."
+                    );
+                    // Reconfigure from a clean build tree so NOTFOUND cache
+                    // entries from the failed probe don't leak into the build.
+                    clean_cmake_build_dir();
+                    dst.define("BUILD_OPENBLAS", "ON");
+                    (dst.build(), true)
+                }
+            }
+        }
+    }
+}
+
+/// Run `cmake::Config::build`, catching the panic the `cmake` crate raises when
+/// the configure/build step fails, so the caller can fall back. The panic
+/// message is silenced for the duration so a successful fallback doesn't print
+/// an alarming Rust backtrace (cmake's own error text is still shown).
+#[cfg(feature = "build")]
+fn try_cmake_build(dst: &mut cmake::Config) -> Result<PathBuf, ()> {
+    use std::panic::{catch_unwind, AssertUnwindSafe};
+    let prev_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(|_| {}));
+    let result = catch_unwind(AssertUnwindSafe(|| dst.build()));
+    std::panic::set_hook(prev_hook);
+    result.map_err(|_| ())
+}
+
+/// Remove the cmake build tree (`$OUT_DIR/build`) so a retry reconfigures from
+/// scratch.
+#[cfg(feature = "build")]
+fn clean_cmake_build_dir() {
+    let build_dir = PathBuf::from(env::var("OUT_DIR").unwrap()).join("build");
+    let _ = std::fs::remove_dir_all(build_dir);
 }
 
 /// Emit the link directives for the BLAS backend HiPO was built against.
 ///
 /// `HIGHS_BLAS_LINK` is an escape hatch that always wins: a space/comma/
-/// semicolon separated list of `rustc-link-lib` specs (e.g.
-/// `static=openblas`, `dylib=mkl_rt`, `framework=Accelerate`) for custom or
-/// system BLAS installs. Otherwise sensible defaults are used.
+/// semicolon separated list of `rustc-link-lib` specs (e.g. `static=openblas`,
+/// `dylib=mkl_rt`, `framework=Accelerate`). Otherwise: if OpenBLAS was built,
+/// link the bundled static archive; if a system BLAS was discovered, link
+/// whatever HiGHS' cmake resolved (read back from `CMakeCache.txt`).
 #[cfg(feature = "build")]
-fn link_hipo_blas(apple: bool, build_openblas: bool) {
+#[cfg_attr(not(feature = "hipo"), allow(unused_variables))]
+fn link_hipo_blas(out_dir: &Path, apple: bool, built_openblas: bool) {
     if !cfg!(feature = "hipo") {
         return;
     }
@@ -174,6 +261,7 @@ fn link_hipo_blas(apple: bool, build_openblas: bool) {
         println!("cargo:rustc-link-search=native={root}/lib64");
     }
 
+    // Explicit override wins over everything.
     if let Some(spec) = hipo_env("HIGHS_BLAS_LINK") {
         for lib in spec
             .split([',', ';', ' '])
@@ -185,22 +273,132 @@ fn link_hipo_blas(apple: bool, build_openblas: bool) {
         return;
     }
 
-    if apple {
-        // HiGHS' FindHipoDeps always links Accelerate on macOS.
-        println!("cargo:rustc-link-lib=framework=Accelerate");
-    } else if build_openblas {
+    if built_openblas {
         // HiGHS installed the OpenBLAS static lib into the same prefix, whose
         // lib/ and lib64/ dirs are already on the link search path.
+        //
+        // We deliberately do NOT add OpenBLAS's transitive deps (pthread, libm)
+        // here. They conceptually belong to OpenBLAS's CMake target, but a -sys
+        // crate links the static archives directly rather than through CMake's
+        // link interface, so that information doesn't reach us (and HiGHS does
+        // not re-export it via pkg-config). It also isn't needed in practice:
+        // rustc's std runtime already links pthread and m (and on glibc >= 2.34
+        // they live in libc), and both are shared libraries so link order is
+        // irrelevant. HIGHS_BLAS_LINK is the escape hatch for any exotic
+        // toolchain that needs something extra.
         println!("cargo:rustc-link-lib=static=openblas");
-    } else {
-        // A system BLAS was selected (via HIGHS_BLA_VENDOR / HIGHS_BLAS_ROOT)
-        // but no explicit link spec was given. Fall back to a shared `blas` and
-        // point the user at the override.
-        println!(
-            "cargo:warning=highs-sys: HiPO built against a non-bundled BLAS but HIGHS_BLAS_LINK is unset; defaulting to `-lblas`. Set HIGHS_BLAS_LINK (e.g. `static=openblas` or `dylib=mkl_rt`) if this is wrong."
-        );
-        println!("cargo:rustc-link-lib=dylib=blas");
+        return;
     }
+
+    // A system BLAS was discovered by HiGHS' cmake. Link exactly what it
+    // resolved.
+    if apple {
+        // On Apple, HiGHS' FindHipoDeps always resolves to Accelerate.
+        println!("cargo:rustc-link-lib=framework=Accelerate");
+        return;
+    }
+    link_discovered_blas(out_dir);
+}
+
+/// Read HiGHS' `CMakeCache.txt` and emit link directives for the BLAS libraries
+/// its discovery step resolved. FindBLAS/FindHipoDeps cache the found libraries
+/// under keys like `BLAS_<name>_LIBRARY` and `OPENBLAS_LIB` (the final
+/// `BLAS_LIBRARIES` variable is not cached), so we scan for those.
+#[cfg(feature = "build")]
+fn link_discovered_blas(out_dir: &Path) {
+    let cache = out_dir.join("build").join("CMakeCache.txt");
+    let contents = std::fs::read_to_string(&cache).unwrap_or_default();
+
+    let mut seen = std::collections::BTreeSet::new();
+    let mut emitted = false;
+    for line in contents.lines() {
+        // Cache lines look like `KEY:TYPE=VALUE`.
+        let (key, value) = match line.split_once('=') {
+            Some((lhs, rhs)) => match lhs.split_once(':') {
+                Some((k, _ty)) => (k, rhs),
+                None => continue,
+            },
+            None => continue,
+        };
+        let is_blas_lib = (key.starts_with("BLAS_") && key.ends_with("_LIBRARY"))
+            || key == "OPENBLAS_LIB"
+            || key == "OpenBLAS_LIBRARIES";
+        if !is_blas_lib {
+            continue;
+        }
+        let value = value.trim();
+        if value.is_empty() || value.ends_with("-NOTFOUND") {
+            continue;
+        }
+        for directive in blas_value_to_link_directives(value) {
+            if seen.insert(directive.clone()) {
+                println!("cargo:{directive}");
+                emitted = true;
+            }
+        }
+    }
+
+    if !emitted {
+        // Could not read the resolution from cache; emit a best-effort default
+        // and point the user at the override.
+        println!(
+            "cargo:warning=highs-sys: could not determine the discovered BLAS from CMakeCache; defaulting to `-lopenblas`. Set HIGHS_BLAS_LINK (e.g. `dylib=openblas` or `dylib=mkl_rt`) if linking fails."
+        );
+        println!("cargo:rustc-link-lib=dylib=openblas");
+    }
+}
+
+/// Convert a cmake-resolved BLAS library value (an absolute path, a framework,
+/// or a bare name) into `rustc-link-search`/`rustc-link-lib` directives.
+#[cfg(feature = "build")]
+fn blas_value_to_link_directives(value: &str) -> Vec<String> {
+    // A macOS framework, given as `/path/Foo.framework`.
+    if let Some(stripped) = value.strip_suffix(".framework") {
+        if let Some(name) = Path::new(stripped).file_name().and_then(|s| s.to_str()) {
+            return vec![format!("rustc-link-lib=framework={name}")];
+        }
+    }
+
+    // An absolute/relative path to a library file, e.g.
+    // `/usr/lib/x86_64-linux-gnu/libopenblas.so`.
+    if value.contains('/') || value.contains('\\') {
+        let path = Path::new(value);
+        let mut out = Vec::new();
+        if let Some(dir) = path.parent() {
+            if !dir.as_os_str().is_empty() {
+                out.push(format!("rustc-link-search=native={}", dir.display()));
+            }
+        }
+        if let Some(name) = lib_name_from_filename(path) {
+            // Pick the link kind from the extension: a Unix `.a` is a static
+            // archive; everything else (`.so`, `.dylib`, Windows `.lib` import
+            // libs) links as a shared/import library.
+            let kind = if path.extension().and_then(|e| e.to_str()) == Some("a") {
+                "static"
+            } else {
+                "dylib"
+            };
+            out.push(format!("rustc-link-lib={kind}={name}"));
+        }
+        if !out.is_empty() {
+            return out;
+        }
+    }
+
+    // Already a linker flag or a bare library name.
+    let name = value.strip_prefix("-l").unwrap_or(value);
+    vec![format!("rustc-link-lib=dylib={name}")]
+}
+
+/// Derive a linker library name from a library file path
+/// (`.../libopenblas.so.0` -> `openblas`, `openblas.lib` -> `openblas`).
+#[cfg(feature = "build")]
+fn lib_name_from_filename(path: &Path) -> Option<String> {
+    let file = path.file_name()?.to_str()?;
+    // Strip the leading `lib` (Unix) and everything from the first extension.
+    let stem = file.strip_prefix("lib").unwrap_or(file);
+    let name = stem.split('.').next().unwrap_or(stem);
+    (!name.is_empty()).then(|| name.to_string())
 }
 
 #[cfg(feature = "build")]
@@ -231,13 +429,11 @@ fn build() -> bool {
         dst.profile("Release");
     }
 
-    // Configure the HiPO interior-point solver (and its BLAS backend) if the
-    // `hipo` feature is enabled. Returns whether HiGHS will build OpenBLAS
-    // itself, which the linking step below needs to know.
-    let hipo_build_openblas = configure_hipo(&mut dst, apple);
+    // Configure the HiPO interior-point solver (and choose how its BLAS backend
+    // is obtained) if the `hipo` feature is enabled.
+    let hipo_blas = configure_hipo(&mut dst, apple);
 
-    let dst = dst
-        .define("FAST_BUILD", "ON")
+    dst.define("FAST_BUILD", "ON")
         .define("BUILD_SHARED_LIBS", "OFF")
         .define(
             "CMAKE_MSVC_RUNTIME_LIBRARY",
@@ -248,8 +444,12 @@ fn build() -> bool {
             },
         )
         .define("CMAKE_INTERPROCEDURAL_OPTIMIZATION", "FALSE")
-        .define("ZLIB", if cfg!(feature = "libz") { "ON" } else { "OFF" })
-        .build();
+        .define("ZLIB", if cfg!(feature = "libz") { "ON" } else { "OFF" });
+
+    // Build HiGHS, honouring the HiPO BLAS plan. This may run cmake twice: once
+    // to try system-BLAS discovery and, if that finds nothing, again with a
+    // bundled OpenBLAS. `built_openblas` records which path was taken.
+    let (dst, built_openblas) = build_highs_with_blas(&mut dst, hipo_blas);
 
     let include_path = dst.join("include").join("highs");
     generate_bindings(Some(dst.clone()), [include_path.as_path()]);
@@ -262,11 +462,12 @@ fn build() -> bool {
         println!("cargo:rustc-link-lib=z");
     }
 
-    // Link the BLAS backend that HiPO was built against.
-    link_hipo_blas(apple, hipo_build_openblas);
-
     let linux = target.contains("linux");
     let mingw = target.contains("pc-windows-gnu");
+
+    // Link the BLAS backend that HiPO was built against.
+    link_hipo_blas(&dst, apple, built_openblas);
+
     if apple || emscripten {
         println!("cargo:rustc-link-lib=c++");
     } else if linux || mingw {
