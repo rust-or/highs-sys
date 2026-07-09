@@ -300,41 +300,63 @@ fn link_hipo_blas(out_dir: &Path, apple: bool, built_openblas: bool) {
     link_discovered_blas(out_dir);
 }
 
-/// Read HiGHS' `CMakeCache.txt` and emit link directives for the BLAS libraries
-/// its discovery step resolved. FindBLAS/FindHipoDeps cache the found libraries
-/// under keys like `BLAS_<name>_LIBRARY` and `OPENBLAS_LIB` (the final
-/// `BLAS_LIBRARIES` variable is not cached), so we scan for those.
+/// Read HiGHS' `CMakeCache.txt` and emit link directives for the BLAS that its
+/// discovery step resolved. Two cases matter, because the final `BLAS_LIBRARIES`
+/// variable is not cached:
+///   * FindBLAS / `find_library` cache full library paths under
+///     `BLAS_<name>_LIBRARY` and `OPENBLAS_LIB` — we parse those directly.
+///   * An OpenBLAS *CMake config package* only caches its config directory as
+///     `OpenBLAS_DIR` (the library path lives in non-cached variables), so we
+///     detect that and link `openblas` from the enclosing lib dir.
 #[cfg(feature = "build")]
 fn link_discovered_blas(out_dir: &Path) {
     let cache = out_dir.join("build").join("CMakeCache.txt");
     let contents = std::fs::read_to_string(&cache).unwrap_or_default();
 
+    // Parse `KEY:TYPE=VALUE` cache lines into (key, value), dropping empty and
+    // NOTFOUND values.
+    let entries: Vec<(&str, &str)> = contents
+        .lines()
+        .filter_map(|line| {
+            let (lhs, value) = line.split_once('=')?;
+            let (key, _ty) = lhs.split_once(':')?;
+            Some((key, value.trim()))
+        })
+        .filter(|(_, v)| !v.is_empty() && !v.ends_with("-NOTFOUND"))
+        .collect();
+
     let mut seen = std::collections::BTreeSet::new();
+    let mut emit = |directive: String| {
+        if seen.insert(directive.clone()) {
+            println!("cargo:{directive}");
+            true
+        } else {
+            false
+        }
+    };
     let mut emitted = false;
-    for line in contents.lines() {
-        // Cache lines look like `KEY:TYPE=VALUE`.
-        let (key, value) = match line.split_once('=') {
-            Some((lhs, rhs)) => match lhs.split_once(':') {
-                Some((k, _ty)) => (k, rhs),
-                None => continue,
-            },
-            None => continue,
-        };
+
+    // 1. Libraries resolved by FindBLAS / find_library, cached as full paths.
+    for &(key, value) in &entries {
         let is_blas_lib = (key.starts_with("BLAS_") && key.ends_with("_LIBRARY"))
             || key == "OPENBLAS_LIB"
             || key == "OpenBLAS_LIBRARIES";
-        if !is_blas_lib {
-            continue;
-        }
-        let value = value.trim();
-        if value.is_empty() || value.ends_with("-NOTFOUND") {
-            continue;
-        }
-        for directive in blas_value_to_link_directives(value) {
-            if seen.insert(directive.clone()) {
-                println!("cargo:{directive}");
-                emitted = true;
+        if is_blas_lib {
+            for directive in blas_value_to_link_directives(value) {
+                emitted |= emit(directive);
             }
+        }
+    }
+
+    // 2. OpenBLAS found via its CMake config package: only `OpenBLAS_DIR` is
+    //    cached. Link `openblas`, adding the enclosing lib dir (the config dir
+    //    is `<libdir>/cmake/openblas`) so non-standard prefixes still resolve.
+    if !emitted {
+        if let Some(&(_, dir)) = entries.iter().find(|&&(k, _)| k == "OpenBLAS_DIR") {
+            if let Some(libdir) = libdir_from_cmake_config_dir(Path::new(dir)) {
+                emit(format!("rustc-link-search=native={}", libdir.display()));
+            }
+            emitted |= emit("rustc-link-lib=dylib=openblas".to_string());
         }
     }
 
@@ -345,6 +367,23 @@ fn link_discovered_blas(out_dir: &Path) {
             "cargo:warning=highs-sys: could not determine the discovered BLAS from CMakeCache; defaulting to `-lopenblas`. Set HIGHS_BLAS_LINK (e.g. `dylib=openblas` or `dylib=mkl_rt`) if linking fails."
         );
         println!("cargo:rustc-link-lib=dylib=openblas");
+    }
+}
+
+/// Given a CMake config-package directory such as `<libdir>/cmake/openblas`,
+/// return the enclosing library directory (`<libdir>`).
+#[cfg(feature = "build")]
+fn libdir_from_cmake_config_dir(dir: &Path) -> Option<PathBuf> {
+    let mut p = dir;
+    loop {
+        let is_cmake = p
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map_or(false, |s| s.eq_ignore_ascii_case("cmake"));
+        if is_cmake {
+            return p.parent().map(Path::to_path_buf);
+        }
+        p = p.parent()?;
     }
 }
 
