@@ -598,7 +598,20 @@ fn main() {
         );
     }
 
-    if !discover() && !build() {
+    // The `hipo` feature requires a HiGHS compiled with `-DHIPO=ON` and its
+    // BLAS-backed extras linked in (see `configure_hipo`). A system HiGHS found
+    // via `discover` (pkg-config) is not guaranteed to have been built with
+    // HiPO, so linking it would make `solver = "hipo"` fail at runtime even
+    // though the feature was requested. When `hipo` is enabled we therefore
+    // skip discovery and always build HiGHS ourselves (the `hipo` feature
+    // implies `build`).
+    let try_discover = !cfg!(feature = "hipo");
+    if cfg!(all(feature = "discover", feature = "hipo")) {
+        println!(
+            "cargo:warning=highs-sys: the 'hipo' feature requires building HiGHS with HiPO, so the 'discover' feature is ignored (a discovered system HiGHS may lack HiPO)."
+        );
+    }
+    if !(try_discover && discover()) && !build() {
         panic!("Could neither discover nor build HiGHS");
     }
 }
