@@ -87,6 +87,42 @@ Note that at the time of writing, HiGHS is packaged in few package managers, so 
 `libz`: enable HiGHS libz linking to enable support for reading 'mps.gz'; only takes effect when `build` is enabled.
 `ninja`: set CMake generator to Ninja; only takes effect when `build` is enabled.
 `discover`: use pkg-config to discover and link against an already installed version of HiGHS; takes precedence over `build` if both are enabled
+`hipo`: build and link HiGHS' HiPO interior-point solver (HiGHS >= 1.14); only takes effect when `build` is enabled. See below.
+
+### HiPO interior-point solver
+
+Enabling the `hipo` feature compiles HiGHS with `-DHIPO=ON` and links its
+Apache/BSD-licensed dependencies (the `highs_extras` library, built statically)
+along with a BLAS backend. Once enabled, the solver can be selected at runtime
+by setting the `solver` option to `"hipo"`.
+
+HiPO requires a BLAS. Rather than hard-coding one strategy, the build defers to
+HiGHS' own CMake (`FindHipoDeps.cmake`) to **discover** a system BLAS, and only
+builds a bundled OpenBLAS when none is found. The library that HiGHS' CMake
+actually resolves is read back from `CMakeCache.txt` and linked, so the Rust
+link line follows CMake's decision.
+
+Default behaviour:
+
+- **Apple targets** use the system Accelerate framework (always present).
+- **Other targets** let HiGHS' CMake look for an installed BLAS (an OpenBLAS
+  CMake config package, `find_package(BLAS)`, MKL, …). **If no system BLAS is
+  found, HiGHS fetches and builds a static OpenBLAS automatically** (via CMake
+  `FetchContent`) — a convenient fallback when nothing is installed. This may
+  run CMake twice: a discovery probe, then the OpenBLAS build.
+
+You can pin or redirect any of this through environment variables:
+
+| Environment variable | Effect |
+| --- | --- |
+| `HIGHS_BUILD_OPENBLAS` | `1` forces building the bundled OpenBLAS (skips discovery); `0` forces discovery only (no fallback — the build fails if no BLAS is found). Unset = discover-then-fallback (default). Ignored on Apple. |
+| `HIGHS_BLA_VENDOR` | Sets CMake `BLA_VENDOR` to select a system BLAS (e.g. `OpenBLAS`, `Intel10_64lp` for MKL). |
+| `HIGHS_BLAS_ROOT` | Sets CMake `BLAS_ROOT` to point at a custom BLAS install; its `lib`/`lib64` dirs are added to the link search path. |
+| `HIGHS_NO_AVX512` | `1` — build OpenBLAS without AVX512 (works around register-spill issues on some CPUs). |
+| `HIGHS_BLAS_LINK` | Explicit link spec(s), space/comma/semicolon separated, e.g. `static=openblas`, `dylib=mkl_rt`, `framework=Accelerate`. Overrides the resolved link line entirely — the escape hatch for setups the automatic detection can't express. |
+
+Note that HiPO's dependencies carry Apache/BSD licenses, distinct from HiGHS'
+MIT license; see HiGHS' `THIRD_PARTY_NOTICES.md`.
 
 ## Example
 
