@@ -87,6 +87,27 @@ Note that at the time of writing, HiGHS is packaged in few package managers, so 
 `libz`: enable HiGHS libz linking to enable support for reading 'mps.gz'; only takes effect when `build` is enabled.
 `ninja`: set CMake generator to Ninja; only takes effect when `build` is enabled.
 `discover`: use pkg-config to discover and link against an already installed version of HiGHS; takes precedence over `build` if both are enabled
+`hipo`: build and link the HiPO interior-point solver; only takes effect when `build` is enabled. See below.
+
+### HiPO interior-point solver
+
+Enable the `hipo` feature, then set the HiGHS `solver` option to `"hipo"` to select the solver.
+
+With this feature, `solver = "ipm"` also uses HiPO. To use HiPO in the MIP solver, set `mip_ipm_solver` or `mip_lp_solver` to `"hipo"`.
+
+If `discover` finds a system-installed HiGHS, the crate uses it as is, so HiPO is available only if that HiGHS was built with it.
+
+HiPO needs a BLAS library:
+
+- On Apple targets, the crate links the system Accelerate framework.
+- On other targets, the HiGHS build downloads OpenBLAS and links it statically, so the build needs `git` and network access. Using a system BLAS is not supported.
+
+The OpenBLAS build has these limits:
+
+- It does not support 32-bit ARM or Emscripten, and cross-compiling usually fails because OpenBLAS requires a `TARGET` that this crate does not set.
+- With MSVC, OpenBLAS uses generic C kernels, so HiPO can be significantly slower than with other toolchains.
+
+Binaries built with this feature are Apache-2.0 licensed, because of the licenses of the HiPO dependencies. For details, see `THIRD_PARTY_NOTICES.md` in HiGHS. OpenBLAS, which that file does not list, is BSD-3-Clause licensed.
 
 ## Example
 

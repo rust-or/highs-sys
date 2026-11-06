@@ -1,6 +1,6 @@
 [package]
 name = "highs-sys"
-version = "1.15.0"
+version = "1.15.1"
 authors = ["Ophir LOJKINE"]
 edition = "2018"
 description = "Rust binding for the HiGHS linear programming solver. See http://highs.dev."
@@ -13,7 +13,7 @@ keywords = ["linear-programming", "optimization", "math", "solver"]
 
 [build-dependencies]
 bindgen = "0.72"
-cmake = { version = "0.1.49", optional = true }
+cmake = { version = "0.1.58", optional = true }
 pkg-config = { version = "0.3.27", optional = true }
 
 [features]
@@ -23,3 +23,4 @@ build = ["dep:cmake"]
 highs_release = []
 ninja = []
 libz = []
+hipo = []

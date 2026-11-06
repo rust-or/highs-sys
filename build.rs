@@ -92,6 +92,7 @@ fn build() -> bool {
     use cmake::Config;
     let target = env::var("TARGET").unwrap();
     let emscripten = target.contains("emscripten");
+    let apple = target.contains("apple");
     let mut dst = Config::new("HiGHS");
     let crt_static = target_has_feature("crt-static");
 
@@ -112,6 +113,23 @@ fn build() -> bool {
     // Avoid using downstream project's profile setting for HiGHS build.
     if cfg!(feature = "highs_release") {
         dst.profile("Release");
+    }
+
+    if cfg!(feature = "hipo") {
+        dst.define("HIPO", "ON");
+        // HiGHS would dlopen a shared extras library at runtime, and a -sys crate
+        // cannot put it on the consumer's library search path.
+        dst.define("BUILD_SHARED_EXTRAS_LIB", "OFF");
+        // Apple uses Accelerate. Elsewhere, a system BLAS may lack CBLAS and its
+        // link line is not exported by HiGHS' CMake, so build OpenBLAS statically.
+        if !apple {
+            dst.define("BUILD_OPENBLAS", "ON");
+            // Otherwise OpenBLAS targets the build machine's CPU and the binary can
+            // crash on an older one. OpenBLAS does not support this with MSVC.
+            if !target.contains("msvc") {
+                dst.define("DYNAMIC_ARCH", "ON");
+            }
+        }
     }
 
     let dst = dst
@@ -136,11 +154,19 @@ fn build() -> bool {
     println!("cargo:rustc-link-search=native={}/lib64", dst.display());
     println!("cargo:rustc-link-lib=static=highs");
 
+    if cfg!(feature = "hipo") {
+        println!("cargo:rustc-link-lib=static=highs_extras");
+        if apple {
+            println!("cargo:rustc-link-lib=framework=Accelerate");
+        } else {
+            println!("cargo:rustc-link-lib=static=openblas");
+        }
+    }
+
     if cfg!(feature = "libz") {
         println!("cargo:rustc-link-lib=z");
     }
 
-    let apple = target.contains("apple");
     let linux = target.contains("linux");
     let mingw = target.contains("pc-windows-gnu");
     if apple || emscripten {
@@ -212,14 +238,15 @@ fn main() {
         any(
             feature = "highs_release",
             feature = "libz",
-            feature = "ninja"
+            feature = "ninja",
+            feature = "hipo"
         ),
         not(feature = "build")
     )) {
         panic!(
             "You have enabled features that control how HiGHS is built, but have not enabled the 'build' feature.
 \
-               Thus, your features will never have any effect. Please enable the 'build' feature on highs-sys if you want to build HiGHS or disable the 'libz', 'ninja' and 'highs_release' features."
+               Thus, your features will never have any effect. Please enable the 'build' feature on highs-sys if you want to build HiGHS or disable the 'libz', 'ninja', 'hipo' and 'highs_release' features."
         );
     }
 
@@ -231,6 +258,12 @@ fn main() {
     if cfg!(feature = "discover") && crt_static {
         println!(
             "cargo::warning=You have enabled Rust's 'crt-static' target feature, but also enabled the 'discover' feature. Discovering a system-installed HiGHS bypasses the bundled build, so highs-sys cannot ensure that HiGHS uses the same MSVC runtime. Please disable 'discover' when using '-C target-feature=+crt-static'."
+        );
+    }
+
+    if cfg!(all(feature = "discover", feature = "hipo")) {
+        println!(
+            "cargo::warning=You have enabled both 'hipo' and 'discover'. If a system-installed HiGHS is discovered, it is used as is, so the HiPO solver is only available if that HiGHS was built with it."
         );
     }
 
