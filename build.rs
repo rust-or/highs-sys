@@ -130,6 +130,12 @@ fn build() -> bool {
                 dst.define("DYNAMIC_ARCH", "ON");
             }
         }
+        // METIS only declares ssize_t under WIN32, which MSVC does not predefine and
+        // the cmake crate removes from CMake's default flags. Defining WIN32 instead
+        // would make v1.15.1's PDLP compare milliseconds with its time limit in seconds.
+        if target.contains("msvc") {
+            dst.cflag("-Dssize_t=ptrdiff_t");
+        }
     }
 
     let dst = dst
