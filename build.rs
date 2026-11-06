@@ -133,8 +133,11 @@ fn build() -> bool {
         // METIS only declares ssize_t under WIN32, which MSVC does not predefine and
         // the cmake crate removes from CMake's default flags. Defining WIN32 instead
         // would make v1.15.1's PDLP compare milliseconds with its time limit in seconds.
+        // Visual Studio generators apply CXX flags to C sources in a mixed target, and
+        // other generators need the C flags.
         if target.contains("msvc") {
             dst.cflag("-Dssize_t=ptrdiff_t");
+            dst.cxxflag("-Dssize_t=ptrdiff_t");
         }
     }
 
