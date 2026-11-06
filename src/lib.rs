@@ -49,3 +49,18 @@ pub const VAR_TYPE_INTEGER: HighsInt = 1;
 pub const VAR_TYPE_SEMI_CONTINUOUS: HighsInt = 2;
 pub const VAR_TYPE_SEMI_INTEGER: HighsInt = 3;
 pub const VAR_TYPE_IMPLICIT_INTEGER: HighsInt = 4;
+
+// These constants mirror the `kIisBoundStatus*` constants in HiGHS' C API.
+pub const IIS_BOUND_STATUS_DROPPED: HighsInt = -1;
+pub const IIS_BOUND_STATUS_NULL: HighsInt = 0;
+pub const IIS_BOUND_STATUS_FREE: HighsInt = 1;
+pub const IIS_BOUND_STATUS_LOWER: HighsInt = 2;
+pub const IIS_BOUND_STATUS_UPPER: HighsInt = 3;
+pub const IIS_BOUND_STATUS_BOXED: HighsInt = 4;
+
+// These constants mirror the `kIisStatus*` constants in HiGHS' C API.
+pub const IIS_STATUS_MIN: HighsInt = IIS_STATUS_NOT_IN_CONFLICT;
+pub const IIS_STATUS_NOT_IN_CONFLICT: HighsInt = -1;
+pub const IIS_STATUS_MAYBE_IN_CONFLICT: HighsInt = 0;
+pub const IIS_STATUS_IN_CONFLICT: HighsInt = 1;
+pub const IIS_STATUS_MAX: HighsInt = IIS_STATUS_IN_CONFLICT;
