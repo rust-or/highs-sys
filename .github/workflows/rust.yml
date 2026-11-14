@@ -13,6 +13,7 @@ jobs:
   build:
     runs-on: ${{ matrix.config.os }}
     strategy:
+      fail-fast: false
       matrix:
         config:
           - os: ubuntu-latest
@@ -44,6 +45,8 @@ jobs:
       env:
         RUSTFLAGS: -C target-feature=+crt-static
       run: cargo test
+    - name: Run tests with HiPO
+      run: cargo test --features hipo
     - name: Build with system-installed HiGHS
       if: matrix.config.os != 'windows-latest'
       run: |
