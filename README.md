@@ -105,7 +105,7 @@ HiPO needs a BLAS library:
 The OpenBLAS build has these limits:
 
 - It does not support 32-bit ARM or Emscripten, and cross-compiling usually fails because OpenBLAS requires a `TARGET` that this crate does not set.
-- With MSVC, OpenBLAS uses generic C kernels, so HiPO can be significantly slower than with other toolchains.
+- With MSVC, optimised OpenBLAS kernels need clang-cl and Ninja. Without them, OpenBLAS uses generic C kernels, so HiPO can be significantly slower than with other toolchains.
 
 Binaries built with this feature are Apache-2.0 licensed, because of the licenses of the HiPO dependencies. For details, see `THIRD_PARTY_NOTICES.md` in HiGHS. OpenBLAS, which that file does not list, is BSD-3-Clause licensed.
 
